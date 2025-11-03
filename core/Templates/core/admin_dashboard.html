@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard Administrativo - EyeGuard</title>
+    <style>
+        :root{
+            --bg:#071026;
+            --panel:#07172a;
+            --muted:#9aa4b2;
+            --accent-green:#27ae60;
+            --accent-magenta:#7b2cbf;
+            --card-bg: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+            --radius:12px;
+            --glass: rgba(255,255,255,0.03);
+        }
+        html,body{height:100%;margin:0}
+        body{
+            font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+            background: linear-gradient(180deg,#071026 0%, #0b1220 60%);color:#fff;padding:20px
+        }
+        .header{
+            display:flex;align-items:center;justify-content:space-between;padding:18px 26px;background:transparent;border-radius:12px;margin-bottom:18px
+        }
+        .brand{display:flex;align-items:center;gap:12px}
+        .brand .logo{width:46px;height:46px;border-radius:10px;background:linear-gradient(135deg,var(--accent-green),var(--accent-magenta));display:flex;align-items:center;justify-content:center;font-weight:700}
+        .container{max-width:1200px;margin:0 auto;padding:0 12px}
+        .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;margin-bottom:20px}
+        .card{background:var(--card-bg);border-radius:var(--radius);padding:18px;box-shadow:0 8px 30px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.03)}
+        .form-group{margin-bottom:12px}
+        label{display:block;margin-bottom:6px;color:var(--muted);font-weight:600}
+        input{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:#fff}
+    /* Selects: show a subtle light background so options are readable on open; option colors set for better contrast */
+        select{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.95);color:#0b1220;appearance:none;-moz-appearance:none;-webkit-appearance:none}
+        select:focus{outline:2px solid rgba(123,44,191,0.18)}
+        select option{color:#0b1220;background:#fff}
+        .btn{display:inline-block;padding:10px 14px;border-radius:10px;border:none;cursor:pointer;margin:6px 4px}
+        .btn-primary{background:linear-gradient(90deg,var(--accent-green),var(--accent-magenta));color:#fff;font-weight:700}
+        .btn-success{background:var(--accent-green);color:#fff}
+        .btn-danger{background:#ff4d6d;color:#fff}
+        .messages{list-style:none;padding:0;margin:1rem 0}
+        .messages li{padding:10px;margin-bottom:10px;border-radius:8px}
+        .messages .success{background:rgba(39,174,96,0.12);color:var(--accent-green)}
+        .messages .error{background:rgba(255,77,109,0.08);color:#ffb3be}
+        .card h2{margin-top:0;color:#fff;padding-bottom:10px;margin-bottom:14px}
+        .tabs{display:flex;margin-bottom:18px}
+        .tab{padding:8px 12px;cursor:pointer;border:none;background:transparent;color:var(--muted);margin-right:6px;border-radius:8px}
+        .tab.active{background:linear-gradient(90deg,var(--accent-green),var(--accent-magenta));color:#fff}
+        .tab-content{display:none}
+        .tab-content.active{display:block}
+        .conductor-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:20px}
+        .conductor-card{background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));border-radius:10px;padding:12px}
+        .estado-fatiga{display:inline-block;padding:6px 12px;border-radius:999px;color:white;font-weight:700}
+        .estado-normal{background:var(--accent-green)}
+        .estado-precaucion{background:#ffb86b;color:#111}
+        .estado-peligro{background:#ff4d6d}
+        .vehiculo-info{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.03)}
+        .conductor-info{margin-bottom:10px}
+        .phone-link{color:var(--accent-green);text-decoration:none}
+        .phone-link:hover{text-decoration:underline}
+        .btn-sm{font-size:0.875rem;padding:6px 10px;border-radius:8px}
+        .mt-2{margin-top:0.5rem}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container" style="display:flex;justify-content:space-between;align-items:center">
+            <div class="brand">
+                <div class="logo">EG</div>
+                <div>
+                    <h1 style="margin:0;font-size:1.1rem">EyeGuard - Dashboard</h1>
+                </div>
+            </div>
+            <div>
+                <form method="post" action="{% url 'logout' %}" style="display:inline-block;margin:0">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm" style="background:transparent;border:1px solid rgba(255,255,255,0.04);color:#fff;padding:8px 12px;border-radius:8px">Cerrar sesión</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+            <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+
+        <div class="tabs">
+            <button class="tab active" onclick="openTab(event, 'registroTab')">Registrar Conductor</button>
+            <button class="tab" onclick="openTab(event, 'monitoreoTab')">Monitorear Conductores</button>
+        </div>
+
+        <div id="registroTab" class="tab-content active">
+            <div class="card">
+                <div class="conductor-selector">
+                    <h2>{% if conductor_seleccionado %}Editar Conductor{% else %}Registrar Nuevo Conductor{% endif %}</h2>
+                    
+                    <div class="form-group mb-4">
+                        <label for="conductor_select">Seleccionar Conductor Existente:</label>
+                        <select id="conductor_select" class="form-control" onchange="seleccionarConductor(this.value)">
+                            <option value="">-- Nuevo Conductor --</option>
+                            {% for c in conductores %}
+                                <option value="{{ c.id }}" {% if conductor_seleccionado.id == c.id %}selected{% endif %}>
+                                    {{ c.nombre_completo }} - {{ c.documento }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <form method="POST">
+                    {% csrf_token %}
+                    {% if conductor_seleccionado %}
+                        <input type="hidden" name="editar_conductor" value="1">
+                    {% endif %}
+
+                    {% if not conductor_seleccionado %}
+                    <h3>Datos de Usuario</h3>
+                    <div class="form-group">
+                        <label for="id_username">Nombre de usuario:</label>
+                        {{ conductor_form.username }}
+                    </div>
+                    <div class="form-group">
+                        <label for="id_password">Contraseña:</label>
+                        {{ conductor_form.password }}
+                    </div>
+                    {% endif %}
+                    <div class="form-group">
+                        <label for="id_email">Correo electrónico:</label>
+                        {{ conductor_form.email }}
+                    </div>
+                    
+                    <h3>Datos del Conductor</h3>
+                    <div class="form-group">
+                        <label for="id_nombres">Nombres:</label>
+                        {{ conductor_form.nombres }}
+                    </div>
+                    <div class="form-group">
+                        <label for="id_apellidos">Apellidos:</label>
+                        {{ conductor_form.apellidos }}
+                    </div>
+                    <div class="form-group">
+                        <label for="id_telefono">Teléfono:</label>
+                        {{ conductor_form.telefono }}
+                    </div>
+                    <div class="form-group">
+                        <label for="id_documento">Documento:</label>
+                        {{ conductor_form.documento }}
+                    </div>
+                    <div class="form-group">
+                        <label for="id_licencia">Licencia:</label>
+                        {{ conductor_form.licencia }}
+                    </div>
+                    <div class="form-group">
+                        <label for="id_licencia_vencimiento">Vencimiento de Licencia:</label>
+                        {{ conductor_form.licencia_vencimiento }}
+                    </div>
+
+                    <h3>Datos del Vehículo</h3>
+                    <div class="form-group">
+                        <label for="id_placa">Placa:</label>
+                        {{ vehiculo_form.placa }}
+                    </div>
+                    <div class="form-group">
+                        <label for="id_marca">Marca:</label>
+                        {{ vehiculo_form.marca }}
+                    </div>
+                    <div class="form-group">
+                        <label for="id_modelo">Modelo:</label>
+                        {{ vehiculo_form.modelo }}
+                    </div>
+                    <div class="form-group">
+                        <label for="id_color">Color:</label>
+                        {{ vehiculo_form.color }}
+                    </div>
+                    <div class="form-group">
+                        <label for="id_tipo_carroceria">Tipo de Carrocería:</label>
+                        {{ vehiculo_form.tipo_carroceria }}
+                    </div>
+                    <div class="form-group">
+                        <label for="id_servicio">Servicio:</label>
+                        {{ vehiculo_form.servicio }}
+                    </div>
+
+                    {% if conductor_seleccionado %}
+                        <button type="submit" class="btn btn-primary">Actualizar Conductor y Vehículo</button>
+                        <button type="button" class="btn" onclick="seleccionarConductor('')">Cancelar edición</button>
+                    {% else %}
+                        <button type="submit" class="btn btn-primary">Registrar Conductor y Vehículo</button>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+
+        <div id="monitoreoTab" class="tab-content">
+            <div class="card">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;">
+                    <h2 style="margin:0">Monitoreo de Conductores</h2>
+                    <form id="exportForm" method="get" action="{% url 'export_critical_events' %}" style="display:flex;gap:8px;align-items:center;">
+                        <input type="date" name="from" style="padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:#fff" />
+                        <input type="date" name="to" style="padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:#fff" />
+                        <button class="btn btn-primary" type="submit">Descargar Informe CSV</button>
+                    </form>
+                </div>
+                <div class="conductor-grid">
+                    {% for conductor in conductores %}
+                    <div class="conductor-card" id="conductor-card-{{ conductor.id }}">
+                        <h3>{{ conductor.nombre_completo }}</h3>
+                        <div style="display:flex;gap:12px;align-items:flex-start;">
+                            <div style="flex:0 0 70%;">
+                                <img src="{% url 'stream_mjpeg' conductor.id %}" alt="Stream {{ conductor.usuario.username }}" style="width:100%;height:auto;max-height:420px;border-radius:6px;object-fit:cover;" />
+                            </div>
+                            <div style="flex:0 0 30%;min-width:240px;">
+                                <div class="conductor-info">
+                                    <p><strong>Usuario:</strong> {{ conductor.usuario.username }}</p>
+                                    <p><strong>Documento:</strong> {{ conductor.documento }}</p>
+                                    <p><strong>Licencia:</strong> {{ conductor.licencia }}</p>
+                                    {% if conductor.licencia_vencimiento %}
+                                        <p><strong>Venc. Licencia:</strong> {{ conductor.licencia_vencimiento }}</p>
+                                    {% endif %}
+                                    <p><strong>Teléfono:</strong> 
+                                        <a href="tel:{{ conductor.telefono }}" class="phone-link">
+                                            {{ conductor.telefono }}
+                                        </a>
+                                    </p>
+                                </div>
+
+                                <p>
+                                    <strong>Estado de Fatiga:</strong>
+                                    <span id="score-{{ conductor.id }}" data-url="{% url 'stream_score' conductor.id %}" class="estado-fatiga estado-normal">Cargando...</span>
+                                </p>
+
+                                <form method="post" action="{% url 'delete_conductor' conductor.id %}" onsubmit="return confirm('¿Eliminar conductor {{ conductor.nombre_completo }}? Esta acción es irreversible.');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger btn-sm mt-2">Eliminar Conductor</button>
+                                </form>
+
+                                <div class="vehiculo-info">
+                                    <h4>Vehículo Asignado</h4>
+                                    {% if conductor.vehiculos.first %}
+                                        <p><strong>Placa:</strong> {{ conductor.vehiculos.first.placa }}</p>
+                                        <p><strong>Marca:</strong> {{ conductor.vehiculos.first.marca }}</p>
+                                        <p><strong>Modelo:</strong> {{ conductor.vehiculos.first.modelo }}</p>
+                                        <p><strong>Color:</strong> {{ conductor.vehiculos.first.color }}</p>
+                                    {% else %}
+                                        <p>Sin vehículo asignado</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p>No hay conductores registrados.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function seleccionarConductor(conductorId) {
+            if (conductorId) {
+                window.location.href = '?conductor_id=' + conductorId;
+            } else {
+                window.location.href = window.location.pathname;
+            }
+        }
+
+        function openTab(evt, tabName) {
+            var i, tabcontent, tablinks;
+            
+            // Ocultar todos los contenidos de las pestañas
+            tabcontent = document.getElementsByClassName("tab-content");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+
+            // Remover la clase "active" de todas las pestañas
+            tablinks = document.getElementsByClassName("tab");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+
+            // Mostrar la pestaña actual y marcarla como activa
+            document.getElementById(tabName).style.display = "block";
+            evt.currentTarget.className += " active";
+        }
+
+        // Polling para actualizar scores en vivo
+        function actualizarScores() {
+            const scoreSpans = document.querySelectorAll('[id^="score-"]');
+            scoreSpans.forEach(span => {
+                const url = span.dataset.url;
+                if (!url) return;
+                fetch(url)
+                    .then(resp => resp.json())
+                    .then(data => {
+                        const s = parseInt(data.score, 10);
+                        span.textContent = s;
+                        span.classList.remove('estado-normal','estado-precaucion','estado-peligro');
+                        if (s >= 70) {
+                            span.classList.add('estado-normal');
+                        } else if (s >= 30) {
+                            span.classList.add('estado-precaucion');
+                        } else {
+                            span.classList.add('estado-peligro');
+                        }
+                    }).catch(err => {
+                        // no hacer nada por ahora
+                    });
+            });
+        }
+
+        // iniciar polling cada 2s cuando se abra la pestaña de monitoreo
+        setInterval(function(){
+            // solo actualizar si la pestaña monitoreo está visible
+            const monitoreo = document.getElementById('monitoreoTab');
+            if (monitoreo && monitoreo.style.display !== 'none') {
+                actualizarScores();
+            }
+        }, 2000);
+    </script>
+</body>
+</html>
