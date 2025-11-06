@@ -61,7 +61,7 @@ class Vehiculo(models.Model):
     placa = models.CharField(
         max_length=6,
         unique=True,
-        validators=[RegexValidator(r'^\d{6}$', message='La placa debe tener exactamente 6 dígitos.')]
+        validators=[RegexValidator(r'^[A-Za-z]{3}\d{3}$', message='La placa debe tener el formato AAA111 (3 letras y 3 dígitos).')]
     )
     marca = models.CharField(max_length=50)
     modelo = models.IntegerField()

@@ -83,6 +83,15 @@ def admin_dashboard(request):
                 vehiculo.save()
                 messages.success(request, "Conductor y vehículo actualizados exitosamente")
                 return redirect('admin_dashboard')
+            else:
+                # mostrar errores cuando la edición falla
+                errors = {
+                    'conductor_errors': conductor_form.errors,
+                    'vehiculo_errors': vehiculo_form.errors,
+                }
+                # registrar en consola para depuración
+                print('Edit conductor errors:', errors)
+                messages.error(request, 'Errores en el formulario al actualizar. Revisa los campos.')
         else:
             conductor_form = ConductorForm(request.POST)
             vehiculo_form = VehiculoForm(request.POST)
@@ -94,6 +103,15 @@ def admin_dashboard(request):
                 vehiculo.save()
                 messages.success(request, "Conductor y vehículo registrados exitosamente")
                 return redirect('admin_dashboard')
+            else:
+                # cuando la creación falla, mostrar y registrar errores para ayudar al debugging
+                errors = {
+                    'conductor_errors': conductor_form.errors,
+                    'vehiculo_errors': vehiculo_form.errors,
+                }
+                print('Create conductor errors:', errors)
+                # Mostrar un mensaje genérico y dejar los errores por campo en la plantilla
+                messages.error(request, 'No se pudo crear el conductor. Revisa los errores en el formulario.')
     else:
         if not conductor_seleccionado:
             conductor_form = ConductorForm()

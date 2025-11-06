@@ -6,7 +6,8 @@ from .models import Usuario, Conductor, Vehiculo
 # Reutilizables
 NAME_REGEX = RegexValidator(r'^[A-Za-zÁÉÍÓÚáéíóúÑñ ]+$', message='Sólo letras y espacios son permitidos en nombres/apellidos.')
 DIGITS_ONLY = RegexValidator(r'^\d+$', message='Este campo acepta sólo dígitos.')
-PLACA_REGEX = RegexValidator(r'^\d{6}$', message='La placa debe tener exactamente 6 dígitos.')
+# Aceptar formato común de placas: 3 letras + 3 dígitos (ej. LZP666).
+PLACA_REGEX = RegexValidator(r'^[A-Za-z]{3}\d{3}$', message='La placa debe tener el formato AAA111 (3 letras y 3 dígitos).')
 
 class ConductorForm(forms.ModelForm):
     username = forms.CharField(
@@ -44,19 +45,34 @@ class ConductorForm(forms.ModelForm):
 
     def save(self, commit=True):
         # Primero creamos el usuario
-        user = Usuario.objects.create_user(
+        password = self.cleaned_data.get('password')
+        if not password:
+            raise forms.ValidationError('La contraseña es requerida para crear el usuario.')
+
+        # Crear el usuario y asegurar que la contraseña quede encriptada
+        user = Usuario(
             username=self.cleaned_data['username'],
-            email=self.cleaned_data['email'],
-            password=self.cleaned_data['password'],
+            email=self.cleaned_data.get('email', ''),
             rol='conductor'
         )
-        
+        user.set_password(password)
+        if commit:
+            user.save()
+
         # Luego creamos el perfil del conductor
         conductor = super().save(commit=False)
         conductor.usuario = user
         if commit:
             conductor.save()
         return conductor
+
+    def clean_password(self):
+        pwd = self.cleaned_data.get('password')
+        if not pwd:
+            raise forms.ValidationError('La contraseña es requerida.')
+        if len(pwd) < 6:
+            raise forms.ValidationError('La contraseña debe tener al menos 6 caracteres.')
+        return pwd
 
     # Validaciones específicas de formulario
     def clean_nombres(self):

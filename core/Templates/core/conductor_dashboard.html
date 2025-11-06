@@ -1,10 +1,222 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Dashboard Conductor</title>
+    <title>Dashboard Conductor - EyeGuard</title>
+    <style>
+        :root {
+            --bg: #071026;
+            --panel: #07172a;
+            --muted: #9aa4b2;
+            --accent-green: #27ae60;
+            --accent-magenta: #7b2cbf;
+            --white: #ffffff;
+            --glass: rgba(255,255,255,0.03);
+        }
+        
+        body {
+            font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(180deg, #071026 0%, #0b1220 60%);
+            color: var(--white);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: var(--glass);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--accent-green), var(--accent-magenta));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: var(--glass);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.04);
+        }
+
+        .card h2 {
+            margin-top: 0;
+            color: var(--accent-green);
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .info-item {
+            background: rgba(255,255,255,0.02);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .info-item h3 {
+            color: var(--accent-magenta);
+            margin-top: 0;
+            font-size: 1.1rem;
+        }
+
+        .info-item p {
+            margin: 5px 0;
+            color: var(--muted);
+        }
+
+        .info-item strong {
+            color: var(--white);
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            background: linear-gradient(90deg, var(--accent-green), var(--accent-magenta));
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert.success {
+            background: rgba(39, 174, 96, 0.1);
+            border: 1px solid var(--accent-green);
+        }
+
+        .alert.warning {
+            background: rgba(255, 159, 67, 0.1);
+            border: 1px solid #ff9f43;
+        }
+    </style>
 </head>
 <body>
-    <h1>Bienvenido Conductor {{ request.user.username }}</h1>
-    <p>Aquí podrás ver tus alertas y tu historial.</p>
+    <div class="container">
+        <div class="header">
+            <div class="brand">
+                <div class="logo">EG</div>
+                <div>
+                    <h1 style="margin:0;font-size:1.2rem">EyeGuard - Panel de Conductor</h1>
+                </div>
+            </div>
+            <form method="post" action="{% url 'logout' %}" style="display:inline-block">
+                {% csrf_token %}
+                <button type="submit" class="btn">Cerrar sesión</button>
+            </form>
+        </div>
+
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="alert {{ message.tags }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="card">
+            <h2>Información Personal</h2>
+            <div class="info-grid">
+                <div class="info-item">
+                    <h3>Datos del Conductor</h3>
+                    <p><strong>Nombre completo:</strong> {{ request.user.perfil_conductor.nombre_completo }}</p>
+                    <p><strong>Documento:</strong> {{ request.user.perfil_conductor.documento }}</p>
+                    <p><strong>Correo:</strong> {{ request.user.email }}</p>
+                    <p><strong>Teléfono:</strong> {{ request.user.perfil_conductor.telefono }}</p>
+                </div>
+                <div class="info-item">
+                    <h3>Licencia de Conducción</h3>
+                    <p><strong>Categoría:</strong> {{ request.user.perfil_conductor.licencia }}</p>
+                    {% if request.user.perfil_conductor.licencia_vencimiento %}
+                    <p><strong>Fecha de vencimiento:</strong> {{ request.user.perfil_conductor.licencia_vencimiento }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Vehículo Asignado</h2>
+            <div class="info-grid">
+                {% with vehiculo=request.user.perfil_conductor.vehiculos.first %}
+                {% if vehiculo %}
+                <div class="info-item">
+                    <h3>Datos del Vehículo</h3>
+                    <p><strong>Placa:</strong> {{ vehiculo.placa }}</p>
+                    <p><strong>Marca:</strong> {{ vehiculo.marca }}</p>
+                    <p><strong>Modelo:</strong> {{ vehiculo.modelo }}</p>
+                    <p><strong>Color:</strong> {{ vehiculo.color }}</p>
+                </div>
+                <div class="info-item">
+                    <h3>Información Adicional</h3>
+                    <p><strong>Tipo de Carrocería:</strong> {{ vehiculo.tipo_carroceria }}</p>
+                    <p><strong>Servicio:</strong> {{ vehiculo.get_servicio_display }}</p>
+                </div>
+                {% else %}
+                <div class="info-item">
+                    <p>No hay vehículo asignado actualmente.</p>
+                </div>
+                {% endif %}
+                {% endwith %}
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Estado Actual</h2>
+            <div class="info-grid">
+                <div class="info-item">
+                    <h3>Monitor de Fatiga</h3>
+                    <p><strong>Estado:</strong> 
+                        {% if request.user.perfil_conductor.estado_fatiga < 0.3 %}
+                            <span style="color: var(--accent-green)">Normal</span>
+                        {% elif request.user.perfil_conductor.estado_fatiga < 0.7 %}
+                            <span style="color: #ff9f43">Precaución</span>
+                        {% else %}
+                            <span style="color: #ff4757">Alerta</span>
+                        {% endif %}
+                    </p>
+                    <p><strong>Última actualización:</strong> {% now "j/n/Y H:i" %}</p>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

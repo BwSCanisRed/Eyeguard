@@ -12,11 +12,92 @@
             --card-bg: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
             --radius:12px;
             --glass: rgba(255,255,255,0.03);
+            --input-bg: rgba(255,255,255,0.04);
+            --error: #ff4d6d;
+            --error-bg: rgba(255,77,109,0.1);
         }
         html,body{height:100%;margin:0}
         body{
             font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
-            background: linear-gradient(180deg,#071026 0%, #0b1220 60%);color:#fff;padding:20px
+            background: linear-gradient(180deg,#071026 0%, #0b1220 60%);
+            color:#fff;
+            padding:20px;
+        }
+        .form-columns {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 24px;
+            margin-top: 20px;
+        }
+        .section-card {
+            background: var(--glass);
+            border: 1px solid rgba(255,255,255,0.04);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .section-card h3 {
+            color: var(--accent-green);
+            margin-top: 0;
+            margin-bottom: 16px;
+            font-size: 1.1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 8px;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+        label {
+            display: block;
+            color: var(--muted);
+            font-size: 0.9rem;
+            margin-bottom: 6px;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--input-bg);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--accent-magenta);
+            box-shadow: 0 0 0 2px rgba(123,44,191,0.2);
+        }
+        select {
+            cursor: pointer;
+            background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+                            linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+            background-position: calc(100% - 20px) calc(1em + 2px),
+                               calc(100% - 15px) calc(1em + 2px);
+            background-size: 5px 5px,
+                           5px 5px;
+            background-repeat: no-repeat;
+            padding-right: 30px;
+        }
+        select option {
+            background-color: var(--bg);
+            color: #fff;
+        }
+        .form-error {
+            color: var(--error);
+            font-size: 0.85rem;
+            margin-top: 4px;
+        }
+        .form-error-box {
+            background: var(--error-bg);
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 16px;
         }
         .header{
             display:flex;align-items:center;justify-content:space-between;padding:18px 26px;background:transparent;border-radius:12px;margin-bottom:18px
@@ -33,10 +114,40 @@
         select{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.95);color:#0b1220;appearance:none;-moz-appearance:none;-webkit-appearance:none}
         select:focus{outline:2px solid rgba(123,44,191,0.18)}
         select option{color:#0b1220;background:#fff}
-        .btn{display:inline-block;padding:10px 14px;border-radius:10px;border:none;cursor:pointer;margin:6px 4px}
-        .btn-primary{background:linear-gradient(90deg,var(--accent-green),var(--accent-magenta));color:#fff;font-weight:700}
-        .btn-success{background:var(--accent-green);color:#fff}
-        .btn-danger{background:#ff4d6d;color:#fff}
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            margin: 6px 4px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        .btn-primary {
+            background: linear-gradient(90deg, var(--accent-green), var(--accent-magenta));
+            color: #fff;
+            font-weight: 600;
+        }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(39,174,96,0.2);
+        }
+        .btn-success {
+            background: var(--accent-green);
+            color: #fff;
+        }
+        .btn-success:hover {
+            background: #219a52;
+        }
+        .btn-danger {
+            background: var(--error);
+            color: #fff;
+        }
+        .btn-danger:hover {
+            background: #ff3355;
+        }
         .messages{list-style:none;padding:0;margin:1rem 0}
         .messages li{padding:10px;margin-bottom:10px;border-radius:8px}
         .messages .success{background:rgba(39,174,96,0.12);color:var(--accent-green)}
@@ -47,18 +158,152 @@
         .tab.active{background:linear-gradient(90deg,var(--accent-green),var(--accent-magenta));color:#fff}
         .tab-content{display:none}
         .tab-content.active{display:block}
-        .conductor-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:20px}
-        .conductor-card{background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));border-radius:10px;padding:12px}
-        .estado-fatiga{display:inline-block;padding:6px 12px;border-radius:999px;color:white;font-weight:700}
-        .estado-normal{background:var(--accent-green)}
-        .estado-precaucion{background:#ffb86b;color:#111}
-        .estado-peligro{background:#ff4d6d}
+        .conductor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 24px;
+            padding: 16px;
+        }
+        .conductor-card {
+            background: var(--glass);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .conductor-content {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 12px;
+        }
+        .estado-fatiga {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            color: white;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+        .estado-normal {
+            background: var(--accent-green);
+        }
+        .estado-precaucion {
+            background: #070605;
+        }
+        .estado-peligro {
+            background: #ff4d6d;
+        }
         .vehiculo-info{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.03)}
-        .conductor-info{margin-bottom:10px}
-        .phone-link{color:var(--accent-green);text-decoration:none}
-        .phone-link:hover{text-decoration:underline}
-        .btn-sm{font-size:0.875rem;padding:6px 10px;border-radius:8px}
-        .mt-2{margin-top:0.5rem}
+        .conductor-info-minimal {
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        .conductor-info-minimal h4 {
+            margin: 0 0 12px 0;
+            color: var(--accent-green);
+            font-size: 1.1rem;
+        }
+        .phone-link {
+            color: var(--accent-magenta);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin: 8px 0;
+        }
+        .phone-link:hover {
+            color: var(--accent-green);
+        }
+        .phone-icon {
+            font-style: normal;
+        }
+        .placa {
+            background: rgba(255,255,255,0.04);
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin: 8px 0;
+        }
+        .score-display {
+            margin: 12px 0;
+            text-align: center;
+        }
+        .btn-sm {
+            font-size: 0.875rem;
+            padding: 8px 16px;
+            border-radius: 6px;
+            width: 100%;
+        }
+        .mt-2 {
+            margin-top: 0.5rem;
+        }
+        .stream-wrapper {
+            width: 100%;
+        }
+        .stream-container {
+            width: 100%;
+            aspect-ratio: 16/9;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .stream-video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .info-wrapper {
+            width: 100%;
+        }
+        .conductor-info-card {
+            background: #000000;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .conductor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .conductor-header h4 {
+            margin: 0;
+            color: var(--accent-green);
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        .conductor-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .phone-link {
+            color: var(--accent-magenta);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95rem;
+        }
+        .phone-link:hover {
+            color: var(--accent-green);
+        }
+        .placa-badge {
+            background: rgba(39,174,96,0.1);
+            color: var(--accent-green);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
@@ -113,76 +358,146 @@
 
                 <form method="POST">
                     {% csrf_token %}
+                    {# show non-field errors for the conductor form #}
+                    {% if conductor_form.non_field_errors %}
+                        <div style="color:#ffb3be;margin-bottom:10px">
+                            {{ conductor_form.non_field_errors }}
+                        </div>
+                    {% endif %}
                     {% if conductor_seleccionado %}
                         <input type="hidden" name="editar_conductor" value="1">
                     {% endif %}
 
-                    {% if not conductor_seleccionado %}
-                    <h3>Datos de Usuario</h3>
-                    <div class="form-group">
-                        <label for="id_username">Nombre de usuario:</label>
-                        {{ conductor_form.username }}
-                    </div>
-                    <div class="form-group">
-                        <label for="id_password">Contraseña:</label>
-                        {{ conductor_form.password }}
-                    </div>
-                    {% endif %}
-                    <div class="form-group">
-                        <label for="id_email">Correo electrónico:</label>
-                        {{ conductor_form.email }}
-                    </div>
-                    
-                    <h3>Datos del Conductor</h3>
-                    <div class="form-group">
-                        <label for="id_nombres">Nombres:</label>
-                        {{ conductor_form.nombres }}
-                    </div>
-                    <div class="form-group">
-                        <label for="id_apellidos">Apellidos:</label>
-                        {{ conductor_form.apellidos }}
-                    </div>
-                    <div class="form-group">
-                        <label for="id_telefono">Teléfono:</label>
-                        {{ conductor_form.telefono }}
-                    </div>
-                    <div class="form-group">
-                        <label for="id_documento">Documento:</label>
-                        {{ conductor_form.documento }}
-                    </div>
-                    <div class="form-group">
-                        <label for="id_licencia">Licencia:</label>
-                        {{ conductor_form.licencia }}
-                    </div>
-                    <div class="form-group">
-                        <label for="id_licencia_vencimiento">Vencimiento de Licencia:</label>
-                        {{ conductor_form.licencia_vencimiento }}
-                    </div>
+                    <div class="form-columns">
+                        <div class="form-column">
+                            {% if not conductor_seleccionado %}
+                            <div class="section-card">
+                                <h3>Datos de Usuario</h3>
+                                <div class="form-group">
+                                    <label for="id_username">Nombre de usuario:</label>
+                                    {{ conductor_form.username }}
+                                    {% if conductor_form.username.errors %}
+                                        <div class="form-error">{{ conductor_form.username.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="form-group">
+                                    <label for="id_password">Contraseña:</label>
+                                    {{ conductor_form.password }}
+                                    {% if conductor_form.password.errors %}
+                                        <div class="form-error">{{ conductor_form.password.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <div class="section-card">
+                                <h3>Datos del Conductor</h3>
+                                <div class="form-group">
+                                    <label for="id_email">Correo electrónico:</label>
+                                    {{ conductor_form.email }}
+                                    {% if conductor_form.email.errors %}
+                                        <div class="form-error">{{ conductor_form.email.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="form-group">
+                                    <label for="id_nombres">Nombres:</label>
+                                    {{ conductor_form.nombres }}
+                                    {% if conductor_form.nombres.errors %}
+                                        <div class="form-error">{{ conductor_form.nombres.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="form-group">
+                                    <label for="id_apellidos">Apellidos:</label>
+                                    {{ conductor_form.apellidos }}
+                                    {% if conductor_form.apellidos.errors %}
+                                        <div class="form-error">{{ conductor_form.apellidos.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="id_documento">Documento:</label>
+                                        {{ conductor_form.documento }}
+                                        {% if conductor_form.documento.errors %}
+                                            <div class="form-error">{{ conductor_form.documento.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="id_telefono">Teléfono:</label>
+                                        {{ conductor_form.telefono }}
+                                        {% if conductor_form.telefono.errors %}
+                                            <div class="form-error">{{ conductor_form.telefono.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="id_licencia">Licencia:</label>
+                                        {{ conductor_form.licencia }}
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="id_licencia_vencimiento">Vencimiento:</label>
+                                        {{ conductor_form.licencia_vencimiento }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-                    <h3>Datos del Vehículo</h3>
-                    <div class="form-group">
-                        <label for="id_placa">Placa:</label>
-                        {{ vehiculo_form.placa }}
-                    </div>
-                    <div class="form-group">
-                        <label for="id_marca">Marca:</label>
-                        {{ vehiculo_form.marca }}
-                    </div>
-                    <div class="form-group">
-                        <label for="id_modelo">Modelo:</label>
-                        {{ vehiculo_form.modelo }}
-                    </div>
-                    <div class="form-group">
-                        <label for="id_color">Color:</label>
-                        {{ vehiculo_form.color }}
-                    </div>
-                    <div class="form-group">
-                        <label for="id_tipo_carroceria">Tipo de Carrocería:</label>
-                        {{ vehiculo_form.tipo_carroceria }}
-                    </div>
-                    <div class="form-group">
-                        <label for="id_servicio">Servicio:</label>
-                        {{ vehiculo_form.servicio }}
+                        <div class="form-column">
+                            <div class="section-card">
+                                <h3>Datos del Vehículo</h3>
+                                {% if vehiculo_form.non_field_errors %}
+                                    <div class="form-error form-error-box">{{ vehiculo_form.non_field_errors }}</div>
+                                {% endif %}
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="id_placa">Placa:</label>
+                                        {{ vehiculo_form.placa }}
+                                        {% if vehiculo_form.placa.errors %}
+                                            <div class="form-error">{{ vehiculo_form.placa.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="id_marca">Marca:</label>
+                                        {{ vehiculo_form.marca }}
+                                        {% if vehiculo_form.marca.errors %}
+                                            <div class="form-error">{{ vehiculo_form.marca.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="id_modelo">Modelo:</label>
+                                        {{ vehiculo_form.modelo }}
+                                        {% if vehiculo_form.modelo.errors %}
+                                            <div class="form-error">{{ vehiculo_form.modelo.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="id_color">Color:</label>
+                                        {{ vehiculo_form.color }}
+                                        {% if vehiculo_form.color.errors %}
+                                            <div class="form-error">{{ vehiculo_form.color.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="id_tipo_carroceria">Tipo de Carrocería:</label>
+                                        {{ vehiculo_form.tipo_carroceria }}
+                                        {% if vehiculo_form.tipo_carroceria.errors %}
+                                            <div class="form-error">{{ vehiculo_form.tipo_carroceria.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="id_servicio">Servicio:</label>
+                                        {{ vehiculo_form.servicio }}
+                                        {% if vehiculo_form.servicio.errors %}
+                                            <div class="form-error">{{ vehiculo_form.servicio.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     {% if conductor_seleccionado %}
@@ -208,46 +523,32 @@
                 <div class="conductor-grid">
                     {% for conductor in conductores %}
                     <div class="conductor-card" id="conductor-card-{{ conductor.id }}">
-                        <h3>{{ conductor.nombre_completo }}</h3>
-                        <div style="display:flex;gap:12px;align-items:flex-start;">
-                            <div style="flex:0 0 70%;">
-                                <img src="{% url 'stream_mjpeg' conductor.id %}" alt="Stream {{ conductor.usuario.username }}" style="width:100%;height:auto;max-height:420px;border-radius:6px;object-fit:cover;" />
-                            </div>
-                            <div style="flex:0 0 30%;min-width:240px;">
-                                <div class="conductor-info">
-                                    <p><strong>Usuario:</strong> {{ conductor.usuario.username }}</p>
-                                    <p><strong>Documento:</strong> {{ conductor.documento }}</p>
-                                    <p><strong>Licencia:</strong> {{ conductor.licencia }}</p>
-                                    {% if conductor.licencia_vencimiento %}
-                                        <p><strong>Venc. Licencia:</strong> {{ conductor.licencia_vencimiento }}</p>
-                                    {% endif %}
-                                    <p><strong>Teléfono:</strong> 
-                                        <a href="tel:{{ conductor.telefono }}" class="phone-link">
-                                            {{ conductor.telefono }}
-                                        </a>
-                                    </p>
+                        <div class="conductor-content">
+                            <div class="stream-wrapper">
+                                <div class="stream-container">
+                                    <img src="{% url 'stream_mjpeg' conductor.id %}" alt="Stream {{ conductor.usuario.username }}" class="stream-video" />
                                 </div>
+                            </div>
+                            <div class="info-wrapper">
+                                <div class="conductor-info-card">
+                                    <div class="conductor-header">
+                                        <h4>{{ conductor.nombre_completo }}</h4>
+                                        <span id="score-{{ conductor.id }}" data-url="{% url 'stream_score' conductor.id %}" class="estado-fatiga estado-normal">Cargando...</span>
+                                    </div>
+                                    
+                                    <div class="conductor-details">
+                                        <a href="tel:{{ conductor.telefono }}" class="phone-link">
+                                            <i class="phone-icon">📞</i> {{ conductor.telefono }}
+                                        </a>
+                                        {% if conductor.vehiculos.first %}
+                                            <div class="placa-badge">{{ conductor.vehiculos.first.placa }}</div>
+                                        {% endif %}
+                                    </div>
 
-                                <p>
-                                    <strong>Estado de Fatiga:</strong>
-                                    <span id="score-{{ conductor.id }}" data-url="{% url 'stream_score' conductor.id %}" class="estado-fatiga estado-normal">Cargando...</span>
-                                </p>
-
-                                <form method="post" action="{% url 'delete_conductor' conductor.id %}" onsubmit="return confirm('¿Eliminar conductor {{ conductor.nombre_completo }}? Esta acción es irreversible.');">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-danger btn-sm mt-2">Eliminar Conductor</button>
-                                </form>
-
-                                <div class="vehiculo-info">
-                                    <h4>Vehículo Asignado</h4>
-                                    {% if conductor.vehiculos.first %}
-                                        <p><strong>Placa:</strong> {{ conductor.vehiculos.first.placa }}</p>
-                                        <p><strong>Marca:</strong> {{ conductor.vehiculos.first.marca }}</p>
-                                        <p><strong>Modelo:</strong> {{ conductor.vehiculos.first.modelo }}</p>
-                                        <p><strong>Color:</strong> {{ conductor.vehiculos.first.color }}</p>
-                                    {% else %}
-                                        <p>Sin vehículo asignado</p>
-                                    {% endif %}
+                                    <form method="post" action="{% url 'delete_conductor' conductor.id %}" onsubmit="return confirm('¿Eliminar conductor {{ conductor.nombre_completo }}? Esta acción es irreversible.');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                                    </form>
                                 </div>
                             </div>
                         </div>
