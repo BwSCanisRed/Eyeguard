@@ -281,8 +281,8 @@
                     canvas.width = video.videoWidth;
                     canvas.height = video.videoHeight;
                     
-                    // Enviar frames cada 500ms
-                    sendInterval = setInterval(sendFrame, 500);
+                    // Enviar frames cada 200ms (5 fps) para mayor fluidez
+                    sendInterval = setInterval(sendFrame, 200);
                 };
 
             } catch (error) {

@@ -638,10 +638,11 @@
         // Polling para actualizar scores en vivo
         function actualizarScores() {
             const scoreSpans = document.querySelectorAll('[id^="score-"]');
+            const promises = [];
             scoreSpans.forEach(span => {
                 const url = span.dataset.url;
                 if (!url) return;
-                fetch(url)
+                const promise = fetch(url)
                     .then(resp => resp.json())
                     .then(data => {
                         const s = parseInt(data.score, 10);
@@ -657,12 +658,14 @@
                     }).catch(err => {
                         // no hacer nada por ahora
                     });
+                promises.push(promise);
             });
+            return Promise.all(promises);
         }
 
         // Actualizar estado de streaming de conductores
         function actualizarEstadoStreaming() {
-            fetch('/api/conductores_activos/')
+            return fetch('/api/conductores_activos/')
                 .then(resp => resp.json())
                 .then(data => {
                     const conductoresActivos = data.conductores_activos || [];
@@ -708,10 +711,25 @@
             }
         }, 2000);
 
-        // Botón de refresco manual
+        // Botón de refresco manual con feedback visual
         function refrescarMonitoreo(){
-            actualizarScores();
-            actualizarEstadoStreaming();
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Actualizando...';
+            btn.style.opacity = '0.6';
+            
+            // Ejecutar actualización
+            Promise.all([
+                actualizarScores(),
+                actualizarEstadoStreaming()
+            ]).finally(() => {
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                    btn.style.opacity = '1';
+                }, 500);
+            });
         }
     </script>
 </body>

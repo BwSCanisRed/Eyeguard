@@ -246,41 +246,40 @@ def mjpeg_generator_for(conductor):
     frame_count = 0
     # Modo híbrido continuo: revisar fuentes en cada iteración
     while True:
-        frame_sent = False
+        frame_to_send = None
+        sleep_time = 0.1
         
         # 1) Prioridad: frames push desde navegador
         state = _conductor_states.get(conductor_id)
         if state and state.get('last_jpeg'):
-            frame = state['last_jpeg']
-            yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-            frame_sent = True
+            frame_to_send = state['last_jpeg']
+            sleep_time = 0.05  # 20 fps para push
             frame_count += 1
             if frame_count == 1:
                 print(f"[INFO] Stream activo para conductor {conductor_id} (modo push)")
-            time.sleep(0.05)
-            continue
         
         # 2) Fallback: camera_source física si está configurada
-        if not frame_sent:
-            source = getattr(conductor, 'camera_source', None)
-            if source and source in _streams:
-                stream_state = _streams[source]
-                with stream_state.lock:
-                    frame = stream_state.frame
-                if frame:
-                    yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-                    frame_sent = True
-                    time.sleep(0.05)
-                    continue
+        elif getattr(conductor, 'camera_source', None) and getattr(conductor, 'camera_source', None) in _streams:
+            source = conductor.camera_source
+            stream_state = _streams[source]
+            with stream_state.lock:
+                if stream_state.frame:
+                    frame_to_send = stream_state.frame
+                    sleep_time = 0.05
         
-        # 3) Placeholder cuando no hay señal disponible
-        if not frame_sent:
+        # 3) Generar frame apropiado
+        if frame_to_send:
+            yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame_to_send + b'\r\n')
+        else:
+            # Placeholder cuando no hay señal disponible
             img = 255 * (np.ones((480, 640, 3), dtype='uint8'))
             cv2.putText(img, 'SIN SEÑAL', (200, 240), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (100, 100, 100), 3)
             cv2.putText(img, 'Esperando transmision...', (150, 290), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (100, 100, 100), 2)
             _, jpeg = cv2.imencode('.jpg', img)
             yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n')
-            time.sleep(0.3)
+            sleep_time = 0.3
+        
+        time.sleep(sleep_time)
 
 
 def get_score_for(conductor):
