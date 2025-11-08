@@ -241,41 +241,46 @@ def mjpeg_generator_for(conductor):
     Si no hay nada: emite un placeholder.
     """
     conductor_id = str(conductor.id)
-    print(f"[DEBUG] Iniciando MJPEG generator para conductor {conductor_id}")
-    print(f"[DEBUG] Estados disponibles: {list(_conductor_states.keys())}")
+    print(f"[INFO] Iniciando MJPEG stream para conductor {conductor_id}")
     
-    # Modo híbrido: intentar push primero, luego camera_source, finalmente placeholder
+    frame_count = 0
+    # Modo híbrido continuo: revisar fuentes en cada iteración
     while True:
-        # 1) Intentar obtener frame del estado push (navegador)
+        frame_sent = False
+        
+        # 1) Prioridad: frames push desde navegador
         state = _conductor_states.get(conductor_id)
-        if state:
-            frame = state.get('last_jpeg')
-            if frame:
-                print(f"[DEBUG] Enviando frame push de {len(frame)} bytes para conductor {conductor_id}")
-                yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-                time.sleep(0.05)
-                continue
-            else:
-                print(f"[DEBUG] Estado existe pero last_jpeg es None para conductor {conductor_id}")
+        if state and state.get('last_jpeg'):
+            frame = state['last_jpeg']
+            yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+            frame_sent = True
+            frame_count += 1
+            if frame_count == 1:
+                print(f"[INFO] Stream activo para conductor {conductor_id} (modo push)")
+            time.sleep(0.05)
+            continue
         
-        # 2) Si no hay push, intentar camera_source si está configurado
-        source = getattr(conductor, 'camera_source', None)
-        if source and source in _streams:
-            stream_state = _streams[source]
-            with stream_state.lock:
-                frame = stream_state.frame
-            if frame:
-                yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-                time.sleep(0.05)
-                continue
+        # 2) Fallback: camera_source física si está configurada
+        if not frame_sent:
+            source = getattr(conductor, 'camera_source', None)
+            if source and source in _streams:
+                stream_state = _streams[source]
+                with stream_state.lock:
+                    frame = stream_state.frame
+                if frame:
+                    yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+                    frame_sent = True
+                    time.sleep(0.05)
+                    continue
         
-        # 3) Placeholder cuando no hay ninguna fuente disponible
-        img = 255 * (np.ones((480, 640, 3), dtype='uint8'))
-        # Agregar texto indicando que no hay señal
-        cv2.putText(img, 'SIN SEÑAL', (200, 240), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (100, 100, 100), 3)
-        _, jpeg = cv2.imencode('.jpg', img)
-        yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n')
-        time.sleep(0.2)
+        # 3) Placeholder cuando no hay señal disponible
+        if not frame_sent:
+            img = 255 * (np.ones((480, 640, 3), dtype='uint8'))
+            cv2.putText(img, 'SIN SEÑAL', (200, 240), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (100, 100, 100), 3)
+            cv2.putText(img, 'Esperando transmision...', (150, 290), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (100, 100, 100), 2)
+            _, jpeg = cv2.imencode('.jpg', img)
+            yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n')
+            time.sleep(0.3)
 
 
 def get_score_for(conductor):
@@ -427,10 +432,13 @@ def process_frame_for_conductor(conductor, frame):
         _, jpeg = cv2.imencode('.jpg', frame)
         state['last_jpeg'] = jpeg.tobytes()
         state['last_update'] = time.time()
-        print(f"[DEBUG] Frame guardado para conductor {conductor_id}, size: {len(state['last_jpeg'])} bytes")
+        # Log solo en el primer frame para confirmar
+        if 'frame_count' not in state:
+            state['frame_count'] = 0
+            print(f"[INFO] Primer frame recibido para conductor {conductor_id}")
+        state['frame_count'] += 1
     except Exception as e:
         print(f"[ERROR] No se pudo guardar frame para conductor {conductor_id}: {e}")
-        pass
 
     return max(SCORE_MIN, min(SCORE_MAX, int(state['score'])))
 

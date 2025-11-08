@@ -159,7 +159,6 @@ def monitor_conductores(request):
 @login_required
 def stream_mjpeg(request, conductor_id):
     conductor = get_object_or_404(Conductor, id=conductor_id)
-    print(f"[DEBUG stream_mjpeg] Conductor ID: {conductor_id}, Objeto: {conductor.id}")
     gen = drowsiness.mjpeg_generator_for(conductor)
     return StreamingHttpResponse(gen, content_type='multipart/x-mixed-replace; boundary=frame')
 
@@ -256,7 +255,6 @@ def conductor_send_frame(request):
         return JsonResponse({'error': 'User is not a conductor'}, status=403)
     
     conductor = request.user.perfil_conductor
-    print(f"[DEBUG send_frame] Conductor ID: {conductor.id}, Usuario: {request.user.username}")
     
     # Obtener el frame del request
     frame_file = request.FILES.get('frame')
