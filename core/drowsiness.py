@@ -241,43 +241,33 @@ def mjpeg_generator_for(conductor):
     Si no hay nada: emite un placeholder.
     """
     conductor_id = str(conductor.id)
-
-    # 1) Si el conductor está enviando frames desde el navegador, usar esos frames
-    if conductor_id in _conductor_states:
-        while True:
-            state = _conductor_states.get(conductor_id)
-            if not state:
-                # estado desapareció, salir del push y caer a placeholder
-                break
+    
+    # Modo híbrido: intentar push primero, luego camera_source, finalmente placeholder
+    while True:
+        # 1) Intentar obtener frame del estado push (navegador)
+        state = _conductor_states.get(conductor_id)
+        if state:
             frame = state.get('last_jpeg')
             if frame:
                 yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-            else:
-                # placeholder si aún no llega ningún frame
-                img = 255 * (np.ones((480, 640, 3), dtype='uint8'))
-                _, jpeg = cv2.imencode('.jpg', img)
-                yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n')
-            time.sleep(0.05)
-
-    # 2) Si no hay push y hay camera_source configurado, usar dispositivo/URL
-    source = getattr(conductor, 'camera_source', None)
-    if source:
-        state = get_stream_state(source)
-        while True:
-            with state.lock:
-                frame = state.frame
+                time.sleep(0.05)
+                continue
+        
+        # 2) Si no hay push, intentar camera_source si está configurado
+        source = getattr(conductor, 'camera_source', None)
+        if source and source in _streams:
+            stream_state = _streams[source]
+            with stream_state.lock:
+                frame = stream_state.frame
             if frame:
                 yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-            else:
-                # imagen placeholder
-                img = 255 * (np.ones((480, 640, 3), dtype='uint8'))
-                _, jpeg = cv2.imencode('.jpg', img)
-                yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n')
-            time.sleep(0.05)
-
-    # 3) Sin push ni camera_source: solo placeholder
-    while True:
+                time.sleep(0.05)
+                continue
+        
+        # 3) Placeholder cuando no hay ninguna fuente disponible
         img = 255 * (np.ones((480, 640, 3), dtype='uint8'))
+        # Agregar texto indicando que no hay señal
+        cv2.putText(img, 'SIN SEÑAL', (200, 240), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (100, 100, 100), 3)
         _, jpeg = cv2.imencode('.jpg', img)
         yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n')
         time.sleep(0.2)
