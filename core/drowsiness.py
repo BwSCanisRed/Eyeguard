@@ -241,6 +241,8 @@ def mjpeg_generator_for(conductor):
     Si no hay nada: emite un placeholder.
     """
     conductor_id = str(conductor.id)
+    print(f"[DEBUG] Iniciando MJPEG generator para conductor {conductor_id}")
+    print(f"[DEBUG] Estados disponibles: {list(_conductor_states.keys())}")
     
     # Modo híbrido: intentar push primero, luego camera_source, finalmente placeholder
     while True:
@@ -249,9 +251,12 @@ def mjpeg_generator_for(conductor):
         if state:
             frame = state.get('last_jpeg')
             if frame:
+                print(f"[DEBUG] Enviando frame push de {len(frame)} bytes para conductor {conductor_id}")
                 yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
                 time.sleep(0.05)
                 continue
+            else:
+                print(f"[DEBUG] Estado existe pero last_jpeg es None para conductor {conductor_id}")
         
         # 2) Si no hay push, intentar camera_source si está configurado
         source = getattr(conductor, 'camera_source', None)
@@ -422,7 +427,9 @@ def process_frame_for_conductor(conductor, frame):
         _, jpeg = cv2.imencode('.jpg', frame)
         state['last_jpeg'] = jpeg.tobytes()
         state['last_update'] = time.time()
-    except Exception:
+        print(f"[DEBUG] Frame guardado para conductor {conductor_id}, size: {len(state['last_jpeg'])} bytes")
+    except Exception as e:
+        print(f"[ERROR] No se pudo guardar frame para conductor {conductor_id}: {e}")
         pass
 
     return max(SCORE_MIN, min(SCORE_MAX, int(state['score'])))
