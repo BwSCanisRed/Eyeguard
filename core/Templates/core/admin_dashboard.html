@@ -168,6 +168,42 @@
             background: var(--glass);
             border-radius: 12px;
             overflow: hidden;
+            position: relative;
+        }
+        .conductor-card.streaming {
+            border: 2px solid var(--accent-green);
+            box-shadow: 0 0 20px rgba(39, 174, 96, 0.3);
+        }
+        .streaming-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: var(--accent-green);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            z-index: 10;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .streaming-dot {
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            animation: blink 1.5s infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
         }
         .conductor-content {
             display: flex;
@@ -190,7 +226,7 @@
             background: var(--accent-green);
         }
         .estado-precaucion {
-            background: #070605;
+            background: #df862e;
         }
         .estado-peligro {
             background: #ff4d6d;
@@ -262,7 +298,7 @@
             width: 100%;
         }
         .conductor-info-card {
-            background: #000000;
+            background: #1d1d1d;
             border-radius: 8px;
             padding: 16px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
@@ -522,7 +558,13 @@
                 </div>
                 <div class="conductor-grid">
                     {% for conductor in conductores %}
-                    <div class="conductor-card" id="conductor-card-{{ conductor.id }}">
+                    <div class="conductor-card {% if conductor.autenticado %}streaming{% endif %}" id="conductor-card-{{ conductor.id }}" data-conductor-id="{{ conductor.id }}">
+                        {% if conductor.autenticado %}
+                        <div class="streaming-badge">
+                            <span class="streaming-dot"></span>
+                            EN VIVO
+                        </div>
+                        {% endif %}
                         <div class="conductor-content">
                             <div class="stream-wrapper">
                                 <div class="stream-container">
@@ -615,12 +657,51 @@
             });
         }
 
+        // Actualizar estado de streaming de conductores
+        function actualizarEstadoStreaming() {
+            fetch('/api/conductores_activos/')
+                .then(resp => resp.json())
+                .then(data => {
+                    const conductoresActivos = data.conductores_activos || [];
+                    
+                    // Actualizar todas las tarjetas de conductores
+                    document.querySelectorAll('.conductor-card').forEach(card => {
+                        const conductorId = card.dataset.conductorId;
+                        const isStreaming = conductoresActivos.includes(conductorId);
+                        
+                        // Agregar/remover clase streaming
+                        if (isStreaming) {
+                            if (!card.classList.contains('streaming')) {
+                                card.classList.add('streaming');
+                                // Agregar badge si no existe
+                                if (!card.querySelector('.streaming-badge')) {
+                                    const badge = document.createElement('div');
+                                    badge.className = 'streaming-badge';
+                                    badge.innerHTML = '<span class="streaming-dot"></span>EN VIVO';
+                                    card.insertBefore(badge, card.firstChild);
+                                }
+                            }
+                        } else {
+                            card.classList.remove('streaming');
+                            // Remover badge si existe
+                            const badge = card.querySelector('.streaming-badge');
+                            if (badge) {
+                                badge.remove();
+                            }
+                        }
+                    });
+                }).catch(err => {
+                    console.error('Error al actualizar estado de streaming:', err);
+                });
+        }
+
         // iniciar polling cada 2s cuando se abra la pestaña de monitoreo
         setInterval(function(){
             // solo actualizar si la pestaña monitoreo está visible
             const monitoreo = document.getElementById('monitoreoTab');
             if (monitoreo && monitoreo.style.display !== 'none') {
                 actualizarScores();
+                actualizarEstadoStreaming();
             }
         }, 2000);
     </script>

@@ -13,5 +13,9 @@ urlpatterns = [
     path('delete-conductor/<uuid:conductor_id>/', views.delete_conductor, name='delete_conductor'),
     path('export-critical-events/', views.export_critical_events, name='export_critical_events'),
     path('logout/', views.logout_view, name='logout'),
+    path('password-reset/', views.password_reset, name='password_reset'),
+    path('conductor/send_frame/', views.conductor_send_frame, name='conductor_send_frame'),
+    path('conductor/stop_stream/', views.conductor_stop_stream, name='conductor_stop_stream'),
+    path('api/conductores_activos/', views.conductores_activos, name='conductores_activos'),
 ]
     

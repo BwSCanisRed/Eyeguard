@@ -18,6 +18,9 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.utils.crypto import get_random_string
 from .models import Usuario, Conductor, Vehiculo
 from .forms import ConductorForm, VehiculoForm, EditConductorForm
 from .decorators import check_session_timeout
@@ -237,3 +240,144 @@ def logout_view(request):
 @check_session_timeout
 def conductor_dashboard(request):
     return render(request, 'core/conductor_dashboard.html')
+
+
+@login_required
+def conductor_send_frame(request):
+    """
+    Recibe frames individuales desde el navegador del conductor
+    y los procesa para detectar somnolencia.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    if not hasattr(request.user, 'perfil_conductor'):
+        return JsonResponse({'error': 'User is not a conductor'}, status=403)
+    
+    conductor = request.user.perfil_conductor
+    
+    # Obtener el frame del request
+    frame_file = request.FILES.get('frame')
+    if not frame_file:
+        return JsonResponse({'error': 'No frame provided'}, status=400)
+    
+    try:
+        # Procesar el frame con el módulo de drowsiness
+        import cv2
+        import numpy as np
+        from io import BytesIO
+        
+        # Leer el frame como imagen
+        file_bytes = np.asarray(bytearray(frame_file.read()), dtype=np.uint8)
+        frame = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+        
+        if frame is None:
+            return JsonResponse({'error': 'Invalid frame'}, status=400)
+        
+        # Procesar con el detector de somnolencia
+        score = drowsiness.process_frame_for_conductor(conductor, frame)
+        
+        # Actualizar el estado del conductor
+        conductor.estado_fatiga = score / 100.0  # Convertir a decimal
+        conductor.autenticado = True
+        conductor.save()
+        
+        # Si el score es crítico, guardar evento
+        if score >= 70:
+            from .models import CriticalEvent
+            vehiculo = conductor.vehiculos.first()
+            CriticalEvent.objects.create(
+                conductor=conductor,
+                vehiculo=vehiculo,
+                score=score,
+                note=f"Alta fatiga detectada desde navegador del conductor"
+            )
+        
+        return JsonResponse({
+            'success': True,
+            'score': score,
+            'status': 'normal' if score < 30 else 'warning' if score < 70 else 'critical'
+        })
+        
+    except Exception as e:
+        print(f"Error processing frame: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def conductor_stop_stream(request):
+    """
+    Notifica que el conductor ha detenido la transmisión
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    if not hasattr(request.user, 'perfil_conductor'):
+        return JsonResponse({'error': 'User is not a conductor'}, status=403)
+    
+    conductor = request.user.perfil_conductor
+    conductor.autenticado = False
+    conductor.save()
+    
+    # Limpiar el stream del conductor
+    drowsiness.stop_stream_for(conductor)
+    
+    return JsonResponse({'success': True})
+
+
+@login_required
+def conductores_activos(request):
+    """
+    Retorna la lista de IDs de conductores que están transmitiendo actualmente
+    """
+    conductores_streaming = Conductor.objects.filter(autenticado=True).values_list('id', flat=True)
+    return JsonResponse({
+        'conductores_activos': [str(c_id) for c_id in conductores_streaming]
+    })
+
+
+def password_reset(request):
+    if request.method == 'POST':
+        email = request.POST.get('email')
+        try:
+            user = Usuario.objects.get(email=email)
+            # Generar contraseña temporal
+            temp_password = get_random_string(12)
+            user.set_password(temp_password)
+            user.save()
+            
+            # Enviar correo con la contraseña temporal
+            subject = 'Recuperación de contraseña - EyeGuard'
+            message = f"""
+            Hola {user.username},
+            
+            Se ha solicitado un restablecimiento de contraseña para tu cuenta.
+            Tu contraseña temporal es: {temp_password}
+            
+            Por favor, ingresa al sistema con esta contraseña y cámbiala inmediatamente por una nueva.
+            
+            Si no solicitaste este cambio, por favor contacta al administrador.
+            
+            Saludos,
+            Equipo EyeGuard
+            """
+            
+            try:
+                send_mail(
+                    subject,
+                    message,
+                    'noreply@eyeguard.com',  # Remitente
+                    [email],  # Destinatario
+                    fail_silently=False,
+                )
+                messages.success(request, 'Se ha enviado un correo con las instrucciones para recuperar tu contraseña.')
+            except Exception as e:
+                messages.error(request, 'Error al enviar el correo. Por favor, contacta al administrador.')
+                print(f"Error sending email: {e}")
+                
+        except Usuario.DoesNotExist:
+            messages.error(request, 'No existe una cuenta registrada con ese correo electrónico.')
+        
+    return render(request, 'core/password_reset.html')

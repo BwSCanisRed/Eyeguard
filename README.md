@@ -62,6 +62,77 @@ python manage.py runserver
 3. Registrar conductores y vehículos
 4. Monitorear el estado de fatiga en tiempo real
 
+## Despliegue en Render
+
+### Preparación
+
+1. Asegúrate de que tu código esté en GitHub
+2. Crea una cuenta en [Render.com](https://render.com)
+
+### Pasos para desplegar
+
+1. **Conectar GitHub**
+   - Ve a Render Dashboard
+   - Haz clic en "New +" → "Blueprint"
+   - Conecta tu repositorio de GitHub
+
+2. **Configurar Variables de Entorno**
+   En el dashboard de Render, configura las siguientes variables:
+   
+   ```
+   ALLOWED_HOSTS=your-app-name.onrender.com
+   EMAIL_HOST_USER=tu-correo@gmail.com
+   EMAIL_HOST_PASSWORD=tu-contraseña-de-aplicación
+   ```
+
+3. **Crear Base de Datos**
+   - Render creará automáticamente una base de datos PostgreSQL
+   - La URL se configurará automáticamente en `DATABASE_URL`
+
+4. **Despliegue Automático**
+   - Render detectará el archivo `render.yaml`
+   - Ejecutará el `build.sh` automáticamente
+   - El servicio estará disponible en: `https://your-app-name.onrender.com`
+
+### Notas Importantes
+
+- **Cámara del navegador**: La funcionalidad de cámara del conductor requiere HTTPS (Render lo provee automáticamente)
+- **Primer despliegue**: Puede tardar 5-10 minutos
+- **Plan gratuito**: El servicio se duerme después de 15 minutos de inactividad
+- **Migraciones**: Se ejecutan automáticamente en cada despliegue
+
+### Crear Superusuario en Producción
+
+Después del primer despliegue, necesitas crear un usuario administrador:
+
+1. Ve a tu dashboard de Render
+2. Selecciona tu servicio web
+3. Ve a "Shell" en el menú lateral
+4. Ejecuta:
+```bash
+python manage.py createsuperuser
+```
+
+### Configurar Correo en Gmail
+
+Para que funcione el sistema de recuperación de contraseña:
+
+1. Ve a tu cuenta de Google
+2. Activa la verificación en 2 pasos
+3. Ve a "Contraseñas de aplicación"
+4. Genera una contraseña para "EyeGuard"
+5. Usa esa contraseña en `EMAIL_HOST_PASSWORD`
+
+## Desarrollo Local
+
+Para desarrollo local, crea un archivo `.env` basado en `.env.example`:
+
+```bash
+cp .env.example .env
+```
+
+Edita `.env` con tus configuraciones locales.
+
 ## Licencia
 
 Este proyecto está bajo la Licencia MIT.

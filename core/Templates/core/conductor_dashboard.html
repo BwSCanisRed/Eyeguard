@@ -217,6 +217,170 @@
                 </div>
             </div>
         </div>
+
+        <div class="card">
+            <h2>Monitoreo de Somnolencia</h2>
+            <div style="text-align: center;">
+                <button id="toggleCameraBtn" class="btn" style="margin-bottom: 20px; cursor: pointer;">
+                    Activar Cámara
+                </button>
+                <div id="cameraStatus" style="margin-bottom: 15px; color: var(--muted);">
+                    Cámara desactivada
+                </div>
+                <video id="videoElement" autoplay playsinline style="width: 100%; max-width: 640px; border-radius: 8px; display: none; background: black;"></video>
+                <canvas id="canvas" style="display: none;"></canvas>
+                <div id="fatigueScore" style="margin-top: 15px; font-size: 1.2rem; display: none;">
+                    <strong>Índice de Fatiga:</strong> <span id="scoreValue" style="color: var(--accent-green);">0</span>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <script>
+        const video = document.getElementById('videoElement');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const toggleBtn = document.getElementById('toggleCameraBtn');
+        const statusDiv = document.getElementById('cameraStatus');
+        const fatigueScoreDiv = document.getElementById('fatigueScore');
+        const scoreValue = document.getElementById('scoreValue');
+        
+        let stream = null;
+        let isStreaming = false;
+        let sendInterval = null;
+
+        toggleBtn.addEventListener('click', async () => {
+            if (!isStreaming) {
+                await startCamera();
+            } else {
+                stopCamera();
+            }
+        });
+
+        async function startCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        width: { ideal: 640 },
+                        height: { ideal: 480 },
+                        facingMode: 'user'
+                    } 
+                });
+                
+                video.srcObject = stream;
+                video.style.display = 'block';
+                isStreaming = true;
+                toggleBtn.textContent = 'Desactivar Cámara';
+                toggleBtn.style.background = 'linear-gradient(90deg, #e74c3c, #c0392b)';
+                statusDiv.textContent = 'Cámara activa - Transmitiendo...';
+                statusDiv.style.color = 'var(--accent-green)';
+                fatigueScoreDiv.style.display = 'block';
+
+                // Esperar a que el video esté listo
+                video.onloadedmetadata = () => {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    
+                    // Enviar frames cada 500ms
+                    sendInterval = setInterval(sendFrame, 500);
+                };
+
+            } catch (error) {
+                console.error('Error al acceder a la cámara:', error);
+                statusDiv.textContent = 'Error: No se pudo acceder a la cámara';
+                statusDiv.style.color = '#e74c3c';
+            }
+        }
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+                video.style.display = 'none';
+                stream = null;
+            }
+            
+            if (sendInterval) {
+                clearInterval(sendInterval);
+                sendInterval = null;
+            }
+            
+            isStreaming = false;
+            toggleBtn.textContent = 'Activar Cámara';
+            toggleBtn.style.background = 'linear-gradient(90deg, var(--accent-green), var(--accent-magenta))';
+            statusDiv.textContent = 'Cámara desactivada';
+            statusDiv.style.color = 'var(--muted)';
+            fatigueScoreDiv.style.display = 'none';
+
+            // Notificar al servidor que se detuvo la transmisión
+            fetch('/conductor/stop_stream/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            });
+        }
+
+        async function sendFrame() {
+            if (!isStreaming || video.paused || video.ended) return;
+
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            canvas.toBlob(async (blob) => {
+                if (!blob) return;
+
+                const formData = new FormData();
+                formData.append('frame', blob, 'frame.jpg');
+                
+                try {
+                    const response = await fetch('/conductor/send_frame/', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: formData
+                    });
+
+                    const data = await response.json();
+                    if (data.score !== undefined) {
+                        scoreValue.textContent = data.score;
+                        
+                        // Cambiar color según el nivel de fatiga
+                        if (data.score < 30) {
+                            scoreValue.style.color = 'var(--accent-green)';
+                        } else if (data.score < 70) {
+                            scoreValue.style.color = '#ff9f43';
+                        } else {
+                            scoreValue.style.color = '#e74c3c';
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error al enviar frame:', error);
+                }
+            }, 'image/jpeg', 0.8);
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Detener la cámara cuando se cierre la página
+        window.addEventListener('beforeunload', () => {
+            if (isStreaming) {
+                stopCamera();
+            }
+        });
+    </script>
 </body>
 </html>

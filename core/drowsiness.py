@@ -254,3 +254,141 @@ def get_score_for(conductor):
     source = conductor.camera_source if hasattr(conductor, 'camera_source') and conductor.camera_source else str(0)
     state = get_stream_state(source)
     return max(SCORE_MIN, min(SCORE_MAX, int(state.score)))
+
+
+# Diccionario para mantener el estado de cada conductor que transmite desde el navegador
+_conductor_states = {}
+
+def process_frame_for_conductor(conductor, frame):
+    """
+    Procesa un frame individual enviado desde el navegador del conductor.
+    Retorna el score de somnolencia.
+    """
+    conductor_id = str(conductor.id)
+    
+    # Inicializar estado si no existe
+    if conductor_id not in _conductor_states:
+        _conductor_states[conductor_id] = {
+            'score': SCORE_START,
+            'frames_no_eyes': 0,
+            'frames_eyes_closed': 0,
+            'last_alert': 0,
+            'face_mesh': mp_face_mesh.FaceMesh(
+                max_num_faces=1,
+                refine_landmarks=True,
+                min_detection_confidence=0.5,
+                min_tracking_confidence=0.5
+            )
+        }
+    
+    state = _conductor_states[conductor_id]
+    face_mesh = state['face_mesh']
+    
+    h, w = frame.shape[:2]
+    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    results = face_mesh.process(rgb)
+    
+    ojos_detectados = False
+    boca_detectada = False
+    head_down = False
+    ear = 0.0
+    
+    if results.multi_face_landmarks:
+        face_landmarks = results.multi_face_landmarks[0]
+        lm = face_landmarks.landmark
+        pts = [(int(p.x * w), int(p.y * h)) for p in lm]
+        
+        # Calcular EAR (Eye Aspect Ratio)
+        try:
+            left_eye_pts = [pts[idx] for idx in LEFT_EYE_IDX]
+            right_eye_pts = [pts[idx] for idx in RIGHT_EYE_IDX]
+            ear_left = StreamState._calcular_EAR(left_eye_pts)
+            ear_right = StreamState._calcular_EAR(right_eye_pts)
+            ear = (ear_left + ear_right) / 2.0
+            ojos_detectados = ear > 0.01
+        except Exception:
+            ojos_detectados = False
+        
+        # Detectar bostezo
+        try:
+            mouth_top = pts[13]
+            mouth_bottom = pts[14]
+            mouth_h = StreamState._calcular_dist(mouth_top, mouth_bottom)
+            nose_pt = pts[NOSE_IDX]
+            chin_pt = pts[CHIN_IDX]
+            face_h = StreamState._calcular_dist(nose_pt, chin_pt)
+            if face_h == 0:
+                face_h = 1
+            mouth_ratio = mouth_h / face_h
+            boca_detectada = mouth_ratio > 0.28
+        except Exception:
+            boca_detectada = False
+        
+        # Detectar cabeza inclinada
+        try:
+            ys = [p[1] for p in pts]
+            top_y = min(ys)
+            bottom_y = max(ys)
+            nose_y = pts[NOSE_IDX][1]
+            if bottom_y - top_y > 0:
+                nose_rel = (nose_y - top_y) / (bottom_y - top_y)
+                if nose_rel > (0.5 + HEAD_DOWN_THRESHOLD):
+                    head_down = True
+        except Exception:
+            head_down = False
+    
+    # Lógica de puntaje
+    tiene_cara = bool(results.multi_face_landmarks)
+    
+    if not ojos_detectados and tiene_cara:
+        state['frames_no_eyes'] += 1
+    else:
+        state['frames_no_eyes'] = 0
+    
+    if ear < EAR_THRESHOLD and tiene_cara:
+        state['frames_eyes_closed'] += 1
+    else:
+        state['frames_eyes_closed'] = 0
+    
+    if state['frames_no_eyes'] > EAR_CONSEC_FRAMES:
+        state['score'] -= SCORE_DECREMENT_NO_EYES
+    else:
+        if ojos_detectados:
+            state['score'] += SCORE_INCREMENT_EYES
+    
+    if state['frames_eyes_closed'] >= EAR_CONSEC_FRAMES:
+        state['score'] -= SCORE_DECREMENT_NO_EYES * 1.5
+    
+    if boca_detectada:
+        state['score'] -= SCORE_DECREMENT_YAWN
+    
+    if head_down:
+        state['score'] -= SCORE_DECREMENT_NO_EYES * 0.8
+    
+    state['score'] = max(SCORE_MIN, min(SCORE_MAX, state['score']))
+    
+    # Alertas
+    if state['score'] < ALERT_THRESHOLD and time.time() - state['last_alert'] > ALERT_COOLDOWN:
+        state['last_alert'] = time.time()
+        for cb in list(_callbacks):
+            try:
+                threading.Thread(target=cb, args=(conductor_id, int(state['score'])), daemon=True).start()
+            except Exception:
+                pass
+    
+    return max(SCORE_MIN, min(SCORE_MAX, int(state['score'])))
+
+
+def stop_stream_for(conductor):
+    """
+    Limpia el estado de un conductor cuando deja de transmitir.
+    """
+    conductor_id = str(conductor.id)
+    if conductor_id in _conductor_states:
+        # Cerrar face_mesh si existe
+        if 'face_mesh' in _conductor_states[conductor_id]:
+            try:
+                _conductor_states[conductor_id]['face_mesh'].close()
+            except Exception:
+                pass
+        del _conductor_states[conductor_id]
