@@ -234,26 +234,75 @@ def get_stream_state(source_key):
 
 
 def mjpeg_generator_for(conductor):
-    # conductor puede ser instancia o id; aceptamos strings
-    source = conductor.camera_source if hasattr(conductor, 'camera_source') and conductor.camera_source else str(0)
-    state = get_stream_state(source)
+    """
+    Genera un stream MJPEG para el administrador.
+    Prioriza frames empujados desde el navegador del conductor.
+    Si no hay push: usa la fuente de cámara configurada (camera_source) si existe.
+    Si no hay nada: emite un placeholder.
+    """
+    conductor_id = str(conductor.id)
+
+    # 1) Si el conductor está enviando frames desde el navegador, usar esos frames
+    if conductor_id in _conductor_states:
+        while True:
+            state = _conductor_states.get(conductor_id)
+            if not state:
+                # estado desapareció, salir del push y caer a placeholder
+                break
+            frame = state.get('last_jpeg')
+            if frame:
+                yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+            else:
+                # placeholder si aún no llega ningún frame
+                img = 255 * (np.ones((480, 640, 3), dtype='uint8'))
+                _, jpeg = cv2.imencode('.jpg', img)
+                yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n')
+            time.sleep(0.05)
+
+    # 2) Si no hay push y hay camera_source configurado, usar dispositivo/URL
+    source = getattr(conductor, 'camera_source', None)
+    if source:
+        state = get_stream_state(source)
+        while True:
+            with state.lock:
+                frame = state.frame
+            if frame:
+                yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+            else:
+                # imagen placeholder
+                img = 255 * (np.ones((480, 640, 3), dtype='uint8'))
+                _, jpeg = cv2.imencode('.jpg', img)
+                yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n')
+            time.sleep(0.05)
+
+    # 3) Sin push ni camera_source: solo placeholder
     while True:
-        with state.lock:
-            frame = state.frame
-        if frame:
-            yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-        else:
-            # imagen placeholder
-            img = 255 * (np.ones((480, 640, 3), dtype='uint8'))
-            _, jpeg = cv2.imencode('.jpg', img)
-            yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n')
-        time.sleep(0.05)
+        img = 255 * (np.ones((480, 640, 3), dtype='uint8'))
+        _, jpeg = cv2.imencode('.jpg', img)
+        yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n')
+        time.sleep(0.2)
 
 
 def get_score_for(conductor):
-    source = conductor.camera_source if hasattr(conductor, 'camera_source') and conductor.camera_source else str(0)
-    state = get_stream_state(source)
-    return max(SCORE_MIN, min(SCORE_MAX, int(state.score)))
+    """
+    Obtiene el score actual para el conductor.
+    Si hay estado de push (navegador), devuelve ese score.
+    En su defecto, si hay camera_source, devuelve el score del flujo de dispositivo.
+    Si no hay nada, devuelve SCORE_START.
+    """
+    conductor_id = str(conductor.id)
+    # Preferir el score del estado de push
+    if conductor_id in _conductor_states:
+        return max(SCORE_MIN, min(SCORE_MAX, int(_conductor_states[conductor_id].get('score', SCORE_START))))
+
+    # Luego intentar usar camera_source si existe
+    source = getattr(conductor, 'camera_source', None)
+    if source:
+        state = get_stream_state(source)
+        return max(SCORE_MIN, min(SCORE_MAX, int(state.score)))
+
+    # Fallback
+    return SCORE_START
 
 
 # Diccionario para mantener el estado de cada conductor que transmite desde el navegador
@@ -273,6 +322,8 @@ def process_frame_for_conductor(conductor, frame):
             'frames_no_eyes': 0,
             'frames_eyes_closed': 0,
             'last_alert': 0,
+            'last_jpeg': None,
+            'last_update': time.time(),
             'face_mesh': mp_face_mesh.FaceMesh(
                 max_num_faces=1,
                 refine_landmarks=True,
@@ -376,6 +427,14 @@ def process_frame_for_conductor(conductor, frame):
             except Exception:
                 pass
     
+    # Guardar último frame como JPEG para el stream MJPEG del admin
+    try:
+        _, jpeg = cv2.imencode('.jpg', frame)
+        state['last_jpeg'] = jpeg.tobytes()
+        state['last_update'] = time.time()
+    except Exception:
+        pass
+
     return max(SCORE_MIN, min(SCORE_MAX, int(state['score'])))
 
 
