@@ -6,7 +6,7 @@ services:
     plan: free
     branch: main
     buildCommand: "./build.sh"
-    startCommand: "gunicorn Eyeguard.wsgi:application"
+    startCommand: "python manage.py create_default_admin && gunicorn Eyeguard.wsgi:application"
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.0"
@@ -30,6 +30,14 @@ services:
         sync: false
       - key: EMAIL_HOST_PASSWORD
         sync: false
+      - key: ADMIN_USERNAME
+        value: "CanisRed"
+      - key: ADMIN_PASSWORD
+        value: "Saguirre27."
+      - key: ADMIN_EMAIL
+        value: "admin@example.com"
+      - key: ADMIN_FORCE_UPDATE
+        value: "False"
 
 databases:
   - name: eyeguard-db
