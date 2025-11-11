@@ -6,7 +6,7 @@ services:
     plan: free
     branch: main
     buildCommand: "./build.sh"
-    startCommand: "python manage.py create_default_admin && gunicorn Eyeguard.wsgi:application"
+    startCommand: "python manage.py create_default_admin && gunicorn Eyeguard.wsgi:application --workers 1 --threads 8 --worker-class gthread --timeout 300"
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.0"
@@ -35,7 +35,7 @@ services:
       - key: ADMIN_PASSWORD
         value: "Saguirre27."
       - key: ADMIN_EMAIL
-        value: "admin@example.com"
+        value: "santiago_guayara@hotmail.com"
       - key: ADMIN_FORCE_UPDATE
         value: "False"
 
