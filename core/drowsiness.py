@@ -323,6 +323,7 @@ def process_frame_for_conductor(conductor, frame):
             'last_alert': 0,
             'last_jpeg': None,
             'last_update': time.time(),
+            'lock': threading.Lock(),
             'face_mesh': mp_face_mesh.FaceMesh(
                 max_num_faces=1,
                 refine_landmarks=True,
@@ -336,7 +337,31 @@ def process_frame_for_conductor(conductor, frame):
     
     h, w = frame.shape[:2]
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    results = face_mesh.process(rgb)
+    # Procesar frame garantizando exclusión mutua por conductor para evitar
+    # errores de timestamp no monótonos en MediaPipe cuando hay concurrencia.
+    try:
+        with state['lock']:
+            results = face_mesh.process(rgb)
+    except ValueError as e:
+        # Si MediaPipe reporta errores de timestamp, reiniciar el grafo
+        # y volver a intentar una vez.
+        if 'Packet timestamp mismatch' in str(e) or 'Graph has errors' in str(e):
+            try:
+                with state['lock']:
+                    face_mesh.close()
+                    state['face_mesh'] = mp_face_mesh.FaceMesh(
+                        max_num_faces=1,
+                        refine_landmarks=True,
+                        min_detection_confidence=0.5,
+                        min_tracking_confidence=0.5
+                    )
+                    face_mesh = state['face_mesh']
+                    results = face_mesh.process(rgb)
+            except Exception:
+                results = type('R', (), {'multi_face_landmarks': None})()
+        else:
+            # Re-lanzar si es otro error
+            raise
     
     ojos_detectados = False
     boca_detectada = False
