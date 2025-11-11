@@ -248,6 +248,9 @@
         let stream = null;
         let isStreaming = false;
         let sendInterval = null;
+        let uploading = false;
+        let targetInterval = 200;
+        let frameTimeout = null;
 
         toggleBtn.addEventListener('click', async () => {
             if (!isStreaming) {
@@ -259,15 +262,28 @@
 
         async function startCamera() {
             try {
-                stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { 
+                // Detectar iOS/Safari para ajustar constraints
+                const isiOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+                const constraints = {
+                    video: {
                         width: { ideal: 640 },
-                        height: { ideal: 480 },
+                        height: { ideal: 360 },
+                        frameRate: isiOS ? { ideal: 12, max: 15 } : { ideal: 15, max: 20 },
                         facingMode: 'user'
-                    } 
-                });
+                    },
+                    audio: false
+                };
                 
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
                 video.srcObject = stream;
+                
+                // Atributos críticos para iOS Safari
+                video.setAttribute('playsinline', 'true');
+                video.setAttribute('autoplay', 'true');
+                video.setAttribute('muted', 'true');
+                video.muted = true;
+                video.autoplay = true;
+                
                 video.style.display = 'block';
                 isStreaming = true;
                 toggleBtn.textContent = 'Desactivar Cámara';
@@ -278,11 +294,17 @@
 
                 // Esperar a que el video esté listo
                 video.onloadedmetadata = () => {
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
+                    // Normalizar resolución para reducir ancho de banda
+                    const targetW = 640;
+                    const aspect = video.videoHeight / video.videoWidth || (9/16);
+                    const targetH = Math.round(targetW * aspect);
+                    canvas.width = targetW;
+                    canvas.height = targetH;
+                    ctx.imageSmoothingEnabled = true;
                     
-                    // Enviar frames cada 200ms (5 fps) para mayor fluidez
-                    sendInterval = setInterval(sendFrame, 200);
+                    // Scheduler adaptativo para iOS (evita solapamiento)
+                    targetInterval = isiOS ? 250 : 200;
+                    scheduleNext();
                 };
 
             } catch (error) {
@@ -304,8 +326,13 @@
                 clearInterval(sendInterval);
                 sendInterval = null;
             }
+            if (frameTimeout) {
+                clearTimeout(frameTimeout);
+                frameTimeout = null;
+            }
             
             isStreaming = false;
+            uploading = false;
             toggleBtn.textContent = 'Activar Cámara';
             toggleBtn.style.background = 'linear-gradient(90deg, var(--accent-green), var(--accent-magenta))';
             statusDiv.textContent = 'Cámara desactivada';
@@ -321,28 +348,50 @@
             });
         }
 
-        async function sendFrame() {
-            if (!isStreaming || video.paused || video.ended) return;
+        function scheduleNext() {
+            if (frameTimeout) clearTimeout(frameTimeout);
+            frameTimeout = setTimeout(sendFrame, targetInterval);
+        }
 
+        async function sendFrame() {
+            // Back-pressure: no enviar si el anterior no terminó
+            if (!isStreaming || video.paused || video.ended || uploading) {
+                if (isStreaming) scheduleNext();
+                return;
+            }
+            
+            uploading = true;
+            const t0 = performance.now();
+            
+            // Dibujar frame reescalado al canvas
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             
+            // Ajustar calidad JPEG según plataforma
+            const isiOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+            const quality = isiOS ? 0.5 : 0.6;
+            
             canvas.toBlob(async (blob) => {
-                if (!blob) return;
-
-                const formData = new FormData();
-                formData.append('frame', blob, 'frame.jpg');
-                
                 try {
+                    if (!blob) {
+                        uploading = false;
+                        scheduleNext();
+                        return;
+                    }
+
+                    const formData = new FormData();
+                    formData.append('frame', blob, 'frame.jpg');
+                    
                     const response = await fetch('/conductor/send_frame/', {
                         method: 'POST',
                         headers: {
                             'X-CSRFToken': getCookie('csrftoken')
                         },
-                        body: formData
+                        body: formData,
+                        cache: 'no-store'
                     });
 
                     const data = await response.json();
-                    if (data.score !== undefined) {
+                    if (data && typeof data.score === 'number') {
                         scoreValue.textContent = data.score;
                         
                         // Cambiar color según el nivel de fatiga
@@ -356,8 +405,15 @@
                     }
                 } catch (error) {
                     console.error('Error al enviar frame:', error);
+                } finally {
+                    const dt = performance.now() - t0;
+                    // Adaptar intervalo dinámicamente según latencia de red
+                    const adaptiveInterval = Math.min(500, Math.max(150, Math.round(dt * 1.3)));
+                    targetInterval = adaptiveInterval;
+                    uploading = false;
+                    scheduleNext();
                 }
-            }, 'image/jpeg', 0.8);
+            }, 'image/jpeg', quality);
         }
 
         function getCookie(name) {
