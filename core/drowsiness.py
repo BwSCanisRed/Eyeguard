@@ -15,17 +15,23 @@ RIGHT_EYE_IDX = [362, 385, 387, 263, 373, 380]
 NOSE_IDX = 1
 CHIN_IDX = 152
 
-# parámetros por defecto
+# Parámetros mejorados para detección de somnolencia
 FPS_SAVE = 5
-EAR_THRESHOLD = 0.25
-EAR_CONSEC_FRAMES = 5
-HEAD_DOWN_THRESHOLD = 0.12
+EAR_THRESHOLD = 0.21  # Más sensible: detecta ojos semi-cerrados
+EAR_CONSEC_FRAMES = 3  # Respuesta más rápida
+MOUTH_OPEN_THRESHOLD = 0.30  # Ajustado para bostezos más sutiles
+HEAD_DOWN_THRESHOLD = 0.15  # Más tolerante para cabeza inclinada
+HEAD_NOD_THRESHOLD = 0.08  # Detectar cabeceo/movimientos bruscos
 SCORE_START = 100
 SCORE_MIN = 0
 SCORE_MAX = 100
-SCORE_DECREMENT_NO_EYES = 1.0
-SCORE_INCREMENT_EYES = 0.5
-SCORE_DECREMENT_YAWN = 0.7
+# Ponderaciones ajustadas
+SCORE_DECREMENT_EYES_CLOSED = 1.8  # Penaliza más ojos cerrados
+SCORE_DECREMENT_NO_EYES = 1.2
+SCORE_INCREMENT_EYES_OPEN = 0.6  # Recuperación más rápida
+SCORE_DECREMENT_YAWN = 1.5  # Bostezo es señal fuerte
+SCORE_DECREMENT_HEAD_DOWN = 1.2
+SCORE_DECREMENT_HEAD_NOD = 0.8
 ALERT_THRESHOLD = 30
 ALERT_COOLDOWN = 3
 
@@ -117,7 +123,7 @@ class StreamState:
                     chin_pt = pts[CHIN_IDX]
                     face_h = StreamState._calcular_dist(nose_pt, chin_pt) if StreamState._calcular_dist(nose_pt, chin_pt) != 0 else 1
                     mouth_ratio = mouth_h / face_h
-                    boca_detectada = mouth_ratio > 0.28
+                    boca_detectada = mouth_ratio > MOUTH_OPEN_THRESHOLD
                 except Exception:
                     boca_detectada = False
 
@@ -157,16 +163,16 @@ class StreamState:
                 self.score -= SCORE_DECREMENT_NO_EYES
             else:
                 if ojos_detectados:
-                    self.score += SCORE_INCREMENT_EYES
+                    self.score += SCORE_INCREMENT_EYES_OPEN
 
             if frames_eyes_closed >= EAR_CONSEC_FRAMES:
-                self.score -= SCORE_DECREMENT_NO_EYES * 1.5
+                self.score -= SCORE_DECREMENT_EYES_CLOSED
 
             if boca_detectada:
                 self.score -= SCORE_DECREMENT_YAWN
 
             if head_down:
-                self.score -= SCORE_DECREMENT_NO_EYES * 0.8
+                self.score -= SCORE_DECREMENT_HEAD_DOWN
 
             self.score = max(SCORE_MIN, min(SCORE_MAX, self.score))
 
@@ -329,142 +335,173 @@ def process_frame_for_conductor(conductor, frame):
                 refine_landmarks=True,
                 min_detection_confidence=0.5,
                 min_tracking_confidence=0.5
-            )
+            ),
+            'chin_positions': [],  # Para detectar cabeceo
+            'sustained_drowsy_start': None  # Marca cuando empieza somnolencia sostenida
         }
     
     state = _conductor_states[conductor_id]
-    face_mesh = state['face_mesh']
     
-    h, w = frame.shape[:2]
-    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    # Procesar frame garantizando exclusión mutua por conductor para evitar
-    # errores de timestamp no monótonos en MediaPipe cuando hay concurrencia.
-    try:
-        with state['lock']:
+    # Usar lock para evitar procesamiento concurrente
+    with state['lock']:
+        face_mesh = state['face_mesh']
+        
+        h, w = frame.shape[:2]
+        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        
+        # Manejar errores de timestamp de MediaPipe
+        try:
             results = face_mesh.process(rgb)
-    except ValueError as e:
-        # Si MediaPipe reporta errores de timestamp, reiniciar el grafo
-        # y volver a intentar una vez.
-        if 'Packet timestamp mismatch' in str(e) or 'Graph has errors' in str(e):
+        except ValueError as e:
+            if "timestamp" in str(e).lower():
+                print(f"[WARN] MediaPipe timestamp error para {conductor_id}, reiniciando FaceMesh")
+                state['face_mesh'].close()
+                state['face_mesh'] = mp_face_mesh.FaceMesh(
+                    max_num_faces=1,
+                    refine_landmarks=True,
+                    min_detection_confidence=0.5,
+                    min_tracking_confidence=0.5
+                )
+                face_mesh = state['face_mesh']
+                results = face_mesh.process(rgb)
+            else:
+                raise
+        
+        ojos_detectados = False
+        boca_detectada = False
+        head_down = False
+        head_nod_detected = False
+        ear = 0.0
+        
+        if results.multi_face_landmarks:
+            face_landmarks = results.multi_face_landmarks[0]
+            lm = face_landmarks.landmark
+            pts = [(int(p.x * w), int(p.y * h)) for p in lm]
+            
+            # Calcular EAR (Eye Aspect Ratio)
             try:
-                with state['lock']:
-                    face_mesh.close()
-                    state['face_mesh'] = mp_face_mesh.FaceMesh(
-                        max_num_faces=1,
-                        refine_landmarks=True,
-                        min_detection_confidence=0.5,
-                        min_tracking_confidence=0.5
-                    )
-                    face_mesh = state['face_mesh']
-                    results = face_mesh.process(rgb)
+                left_eye_pts = [pts[idx] for idx in LEFT_EYE_IDX]
+                right_eye_pts = [pts[idx] for idx in RIGHT_EYE_IDX]
+                ear_left = StreamState._calcular_EAR(left_eye_pts)
+                ear_right = StreamState._calcular_EAR(right_eye_pts)
+                ear = (ear_left + ear_right) / 2.0
+                ojos_detectados = ear > 0.01
             except Exception:
-                results = type('R', (), {'multi_face_landmarks': None})()
+                ojos_detectados = False
+            
+            # Detectar bostezo
+            try:
+                mouth_top = pts[13]
+                mouth_bottom = pts[14]
+                mouth_h = StreamState._calcular_dist(mouth_top, mouth_bottom)
+                nose_pt = pts[NOSE_IDX]
+                chin_pt = pts[CHIN_IDX]
+                face_h = StreamState._calcular_dist(nose_pt, chin_pt)
+                if face_h == 0:
+                    face_h = 1
+                mouth_ratio = mouth_h / face_h
+                boca_detectada = mouth_ratio > MOUTH_OPEN_THRESHOLD
+            except Exception:
+                boca_detectada = False
+            
+            # Detectar cabeza inclinada
+            try:
+                ys = [p[1] for p in pts]
+                top_y = min(ys)
+                bottom_y = max(ys)
+                nose_y = pts[NOSE_IDX][1]
+                chin_y = pts[CHIN_IDX][1]
+                
+                if bottom_y - top_y > 0:
+                    nose_rel = (nose_y - top_y) / (bottom_y - top_y)
+                    if nose_rel > (0.5 + HEAD_DOWN_THRESHOLD):
+                        head_down = True
+                
+                # Detectar cabeceo (movimientos bruscos del mentón)
+                state['chin_positions'].append(chin_y)
+                if len(state['chin_positions']) > 10:  # Mantener ventana de 10 frames
+                    state['chin_positions'].pop(0)
+                    if len(state['chin_positions']) >= 5:
+                        chin_variance = max(state['chin_positions']) - min(state['chin_positions'])
+                        # Normalizar por altura de cara
+                        if bottom_y - top_y > 0:
+                            chin_variance_norm = chin_variance / (bottom_y - top_y)
+                            if chin_variance_norm > HEAD_NOD_THRESHOLD:
+                                head_nod_detected = True
+            except Exception:
+                head_down = False
+        
+        # Lógica de puntaje mejorada
+        tiene_cara = bool(results.multi_face_landmarks)
+        
+        if not ojos_detectados and tiene_cara:
+            state['frames_no_eyes'] += 1
         else:
-            # Re-lanzar si es otro error
-            raise
-    
-    ojos_detectados = False
-    boca_detectada = False
-    head_down = False
-    ear = 0.0
-    
-    if results.multi_face_landmarks:
-        face_landmarks = results.multi_face_landmarks[0]
-        lm = face_landmarks.landmark
-        pts = [(int(p.x * w), int(p.y * h)) for p in lm]
+            state['frames_no_eyes'] = 0
         
-        # Calcular EAR (Eye Aspect Ratio)
-        try:
-            left_eye_pts = [pts[idx] for idx in LEFT_EYE_IDX]
-            right_eye_pts = [pts[idx] for idx in RIGHT_EYE_IDX]
-            ear_left = StreamState._calcular_EAR(left_eye_pts)
-            ear_right = StreamState._calcular_EAR(right_eye_pts)
-            ear = (ear_left + ear_right) / 2.0
-            ojos_detectados = ear > 0.01
-        except Exception:
-            ojos_detectados = False
+        if ear < EAR_THRESHOLD and tiene_cara:
+            state['frames_eyes_closed'] += 1
+        else:
+            state['frames_eyes_closed'] = 0
         
-        # Detectar bostezo
-        try:
-            mouth_top = pts[13]
-            mouth_bottom = pts[14]
-            mouth_h = StreamState._calcular_dist(mouth_top, mouth_bottom)
-            nose_pt = pts[NOSE_IDX]
-            chin_pt = pts[CHIN_IDX]
-            face_h = StreamState._calcular_dist(nose_pt, chin_pt)
-            if face_h == 0:
-                face_h = 1
-            mouth_ratio = mouth_h / face_h
-            boca_detectada = mouth_ratio > 0.28
-        except Exception:
-            boca_detectada = False
+        # Detectar somnolencia sostenida
+        is_drowsy = (state['frames_eyes_closed'] >= EAR_CONSEC_FRAMES or 
+                     state['frames_no_eyes'] > EAR_CONSEC_FRAMES)
         
-        # Detectar cabeza inclinada
+        if is_drowsy:
+            if state['sustained_drowsy_start'] is None:
+                state['sustained_drowsy_start'] = time.time()
+            drowsy_duration = time.time() - state['sustained_drowsy_start']
+            # Penalización creciente con el tiempo (multiplicador de duración)
+            time_multiplier = 1.0 + min(drowsy_duration / 5.0, 2.0)  # Max 3x después de 10s
+        else:
+            state['sustained_drowsy_start'] = None
+            time_multiplier = 1.0
+        
+        # Aplicar decrementos/incrementos
+        if state['frames_no_eyes'] > EAR_CONSEC_FRAMES:
+            state['score'] -= SCORE_DECREMENT_NO_EYES * time_multiplier
+        else:
+            if ojos_detectados:
+                state['score'] += SCORE_INCREMENT_EYES_OPEN
+        
+        if state['frames_eyes_closed'] >= EAR_CONSEC_FRAMES:
+            state['score'] -= SCORE_DECREMENT_EYES_CLOSED * time_multiplier
+        
+        if boca_detectada:
+            state['score'] -= SCORE_DECREMENT_YAWN
+        
+        if head_down:
+            state['score'] -= SCORE_DECREMENT_HEAD_DOWN * time_multiplier
+        
+        if head_nod_detected:
+            state['score'] -= SCORE_DECREMENT_HEAD_NOD
+        
+        state['score'] = max(SCORE_MIN, min(SCORE_MAX, state['score']))
+        
+        # Alertas
+        if state['score'] < ALERT_THRESHOLD and time.time() - state['last_alert'] > ALERT_COOLDOWN:
+            state['last_alert'] = time.time()
+            for cb in list(_callbacks):
+                try:
+                    threading.Thread(target=cb, args=(conductor_id, int(state['score'])), daemon=True).start()
+                except Exception:
+                    pass
+        
+        # Guardar último frame como JPEG para el stream MJPEG del admin
         try:
-            ys = [p[1] for p in pts]
-            top_y = min(ys)
-            bottom_y = max(ys)
-            nose_y = pts[NOSE_IDX][1]
-            if bottom_y - top_y > 0:
-                nose_rel = (nose_y - top_y) / (bottom_y - top_y)
-                if nose_rel > (0.5 + HEAD_DOWN_THRESHOLD):
-                    head_down = True
-        except Exception:
-            head_down = False
-    
-    # Lógica de puntaje
-    tiene_cara = bool(results.multi_face_landmarks)
-    
-    if not ojos_detectados and tiene_cara:
-        state['frames_no_eyes'] += 1
-    else:
-        state['frames_no_eyes'] = 0
-    
-    if ear < EAR_THRESHOLD and tiene_cara:
-        state['frames_eyes_closed'] += 1
-    else:
-        state['frames_eyes_closed'] = 0
-    
-    if state['frames_no_eyes'] > EAR_CONSEC_FRAMES:
-        state['score'] -= SCORE_DECREMENT_NO_EYES
-    else:
-        if ojos_detectados:
-            state['score'] += SCORE_INCREMENT_EYES
-    
-    if state['frames_eyes_closed'] >= EAR_CONSEC_FRAMES:
-        state['score'] -= SCORE_DECREMENT_NO_EYES * 1.5
-    
-    if boca_detectada:
-        state['score'] -= SCORE_DECREMENT_YAWN
-    
-    if head_down:
-        state['score'] -= SCORE_DECREMENT_NO_EYES * 0.8
-    
-    state['score'] = max(SCORE_MIN, min(SCORE_MAX, state['score']))
-    
-    # Alertas
-    if state['score'] < ALERT_THRESHOLD and time.time() - state['last_alert'] > ALERT_COOLDOWN:
-        state['last_alert'] = time.time()
-        for cb in list(_callbacks):
-            try:
-                threading.Thread(target=cb, args=(conductor_id, int(state['score'])), daemon=True).start()
-            except Exception:
-                pass
-    
-    # Guardar último frame como JPEG para el stream MJPEG del admin
-    try:
-        _, jpeg = cv2.imencode('.jpg', frame)
-        state['last_jpeg'] = jpeg.tobytes()
-        state['last_update'] = time.time()
-        # Log solo en el primer frame para confirmar
-        if 'frame_count' not in state:
-            state['frame_count'] = 0
-            print(f"[INFO] Primer frame recibido para conductor {conductor_id}")
-        state['frame_count'] += 1
-    except Exception as e:
-        print(f"[ERROR] No se pudo guardar frame para conductor {conductor_id}: {e}")
+            _, jpeg = cv2.imencode('.jpg', frame)
+            state['last_jpeg'] = jpeg.tobytes()
+            state['last_update'] = time.time()
+            # Log solo en el primer frame para confirmar
+            if 'frame_count' not in state:
+                state['frame_count'] = 0
+                print(f"[INFO] Primer frame recibido para conductor {conductor_id}")
+            state['frame_count'] += 1
+        except Exception as e:
+            print(f"[ERROR] No se pudo guardar frame para conductor {conductor_id}: {e}")
 
-    return max(SCORE_MIN, min(SCORE_MAX, int(state['score'])))
+        return max(SCORE_MIN, min(SCORE_MAX, int(state['score'])))
 
 
 def stop_stream_for(conductor):
@@ -479,4 +516,7 @@ def stop_stream_for(conductor):
                 _conductor_states[conductor_id]['face_mesh'].close()
             except Exception:
                 pass
+        # Limpiar last_jpeg para que el generador muestre "SIN SEÑAL"
+        _conductor_states[conductor_id]['last_jpeg'] = None
+        print(f"[INFO] Stream detenido para conductor {conductor_id}, limpiando frames")
         del _conductor_states[conductor_id]
