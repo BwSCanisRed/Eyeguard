@@ -32,6 +32,7 @@ SCORE_INCREMENT_EYES_OPEN = 0.6  # Recuperación más rápida
 SCORE_DECREMENT_YAWN = 1.5  # Bostezo es señal fuerte
 SCORE_DECREMENT_HEAD_DOWN = 1.2
 SCORE_DECREMENT_HEAD_NOD = 0.8
+SCORE_DECREMENT_NOD_EYES = 3.5  # Penalización combinada fuerte: cabeceo + ojos cerrados
 ALERT_THRESHOLD = 30
 ALERT_COOLDOWN = 3
 
@@ -476,6 +477,9 @@ def process_frame_for_conductor(conductor, frame):
         
         if head_nod_detected:
             state['score'] -= SCORE_DECREMENT_HEAD_NOD
+            # Penalización adicional cuando hay cabeceo y ojos cerrados simultáneamente
+            if state['frames_eyes_closed'] >= EAR_CONSEC_FRAMES:
+                state['score'] -= SCORE_DECREMENT_NOD_EYES * time_multiplier
         
         state['score'] = max(SCORE_MIN, min(SCORE_MAX, state['score']))
         
