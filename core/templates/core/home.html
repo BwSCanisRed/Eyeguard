@@ -1,7 +1,8 @@
+{% load i18n %}
 <!DOCTYPE html>
-<html>
+<html lang="{{ LANGUAGE_CODE }}">
 <head>
-    <title>EyeGuard - Sistema de Monitoreo de Conductores</title>
+    <title>EyeGuard - {% trans "Sistema de Monitoreo de Conductores" %}</title>
     <style>
         :root {
             --accent-green: #27ae60;
@@ -99,6 +100,33 @@
         .cta-button:hover {
             transform: translateY(-2px);
         }
+        .language-selector {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 8px;
+            background: var(--glass);
+            padding: 8px 12px;
+            border-radius: 30px;
+            border: 1px solid var(--glass-light);
+        }
+        .language-selector button {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 1.5rem;
+            transition: transform 0.2s;
+            padding: 4px 8px;
+            border-radius: 8px;
+        }
+        .language-selector button:hover {
+            transform: scale(1.1);
+            background: var(--glass-light);
+        }
+        .language-selector button.active {
+            background: var(--accent-green);
+        }
         @media (max-width: 768px) {
             .content {
                 margin: 20px;
@@ -106,38 +134,79 @@
             h1 {
                 font-size: 2rem;
             }
+            .language-selector {
+                top: 10px;
+                right: 10px;
+                padding: 6px 10px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="hero">
+        <div class="language-selector">
+            <button onclick="changeLanguage('en')" title="English" {% if LANGUAGE_CODE == 'en' %}class="active"{% endif %}>🇬🇧</button>
+            <button onclick="changeLanguage('es')" title="Español" {% if LANGUAGE_CODE == 'es' %}class="active"{% endif %}>🇪🇸</button>
+            <button onclick="changeLanguage('de')" title="Deutsch" {% if LANGUAGE_CODE == 'de' %}class="active"{% endif %}>🇩🇪</button>
+            <button onclick="changeLanguage('fr')" title="Français" {% if LANGUAGE_CODE == 'fr' %}class="active"{% endif %}>🇫🇷</button>
+            <button onclick="changeLanguage('pt')" title="Português" {% if LANGUAGE_CODE == 'pt' %}class="active"{% endif %}>🇵🇹</button>
+        </div>
         <div class="content">
             <div class="brand">
                 <div class="logo">EG</div>
                 <h1>EyeGuard</h1>
             </div>
             <p class="lead">
-                Sistema inteligente de monitoreo de conductores que utiliza inteligencia artificial 
-                para detectar signos de fatiga y somnolencia en tiempo real, mejorando la seguridad vial.
+                {% trans "Sistema inteligente de monitoreo de conductores que utiliza inteligencia artificial para detectar signos de fatiga y somnolencia en tiempo real, mejorando la seguridad vial." %}
             </p>
 
             <div class="features">
                 <div class="feature">
-                    <h3>Detección IA</h3>
-                    <p>Análisis en tiempo real de signos de fatiga usando visión por computadora</p>
+                    <h3>{% trans "Detección IA" %}</h3>
+                    <p>{% trans "Análisis en tiempo real de signos de fatiga usando visión por computadora" %}</p>
                 </div>
                 <div class="feature">
-                    <h3>Monitoreo 24/7</h3>
-                    <p>Supervisión continua y alertas inmediatas ante situaciones de riesgo</p>
+                    <h3>{% trans "Monitoreo 24/7" %}</h3>
+                    <p>{% trans "Supervisión continua y alertas inmediatas ante situaciones de riesgo" %}</p>
                 </div>
                 <div class="feature">
-                    <h3>Reportes</h3>
-                    <p>Informes detallados y análisis histórico de eventos críticos</p>
+                    <h3>{% trans "Reportes" %}</h3>
+                    <p>{% trans "Informes detallados y análisis histórico de eventos críticos" %}</p>
                 </div>
             </div>
 
-            <a href="{% url 'login' %}" class="cta-button">Iniciar Sesión</a>
+            <a href="{% url 'login' %}" class="cta-button">{% trans "Iniciar Sesión" %}</a>
         </div>
     </div>
+    
+    <script>
+        function changeLanguage(langCode) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{% url "set_language" %}';
+            
+            const csrfToken = '{{ csrf_token }}';
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = csrfToken;
+            
+            const langInput = document.createElement('input');
+            langInput.type = 'hidden';
+            langInput.name = 'language';
+            langInput.value = langCode;
+            
+            const nextInput = document.createElement('input');
+            nextInput.type = 'hidden';
+            nextInput.name = 'next';
+            nextInput.value = window.location.pathname;
+            
+            form.appendChild(csrfInput);
+            form.appendChild(langInput);
+            form.appendChild(nextInput);
+            document.body.appendChild(form);
+            form.submit();
+        }
+    </script>
 </body>
 </html>

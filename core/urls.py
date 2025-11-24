@@ -1,7 +1,9 @@
 from django.urls import path
 from . import views
+from django.conf.urls.i18n import i18n_patterns
 
 urlpatterns = [
+    path('i18n/setlang/', views.set_language, name='set_language'),
     path('', views.home, name='home'),
     path('login/', views.login_view, name='login'),
     path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),

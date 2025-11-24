@@ -1,0 +1,54 @@
+# LANGUAGE translation for EyeGuard
+# Copyright (C) 2025
+msgid ""
+msgstr ""
+"Project-Id-Version: EyeGuard 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-11-15 00:00+0000\n"
+"PO-Revision-Date: 2025-11-15 00:00+0000\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Sistema de Monitoreo de Conductores"
+msgstr "Driver Monitoring System"
+
+msgid "Sistema inteligente de monitoreo de conductores que utiliza inteligencia artificial para detectar signos de fatiga y somnolencia en tiempo real, mejorando la seguridad vial."
+msgstr "Intelligent driver monitoring system that uses artificial intelligence to detect signs of fatigue and drowsiness in real time, improving road safety."
+
+msgid "Detección IA"
+msgstr "AI Detection"
+
+msgid "Análisis en tiempo real de signos de fatiga usando visión por computadora"
+msgstr "Real-time analysis of fatigue signs using computer vision"
+
+msgid "Monitoreo 24/7"
+msgstr "24/7 Monitoring"
+
+msgid "Supervisión continua y alertas inmediatas ante situaciones de riesgo"
+msgstr "Continuous monitoring and immediate alerts in risk situations"
+
+msgid "Reportes"
+msgstr "Reports"
+
+msgid "Informes detallados y análisis histórico de eventos críticos"
+msgstr "Detailed reports and historical analysis of critical events"
+
+msgid "Iniciar Sesión"
+msgstr "Login"
+
+msgid "English"
+msgstr "English"
+
+msgid "Español"
+msgstr "Spanish"
+
+msgid "Deutsch"
+msgstr "German"
+
+msgid "Français"
+msgstr "French"
+
+msgid "Português"
+msgstr "Portuguese"

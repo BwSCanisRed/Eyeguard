@@ -2,11 +2,21 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required  
 from django.http import HttpResponse
-
-from django.shortcuts import render, redirect
+from django.utils import translation
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+
+def set_language(request):
+    """Vista para cambiar el idioma de la aplicación"""
+    if request.method == 'POST':
+        language = request.POST.get('language')
+        next_url = request.POST.get('next', '/')
+        if language:
+            request.session['django_language'] = language
+            translation.activate(language)
+        return redirect(next_url)
+    return redirect('home')
 
 def home(request):
     # Mostrar la landing page principal del proyecto en la raíz.
