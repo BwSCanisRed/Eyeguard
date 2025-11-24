@@ -52,3 +52,138 @@ msgstr "Français"
 
 msgid "Português"
 msgstr "Portugais"
+
+msgid "Usuario"
+msgstr "Utilisateur"
+
+msgid "Contraseña"
+msgstr "Mot de passe"
+
+msgid "Tipo de Usuario"
+msgstr "Type d'utilisateur"
+
+msgid "¿Olvidaste tu contraseña?"
+msgstr "Mot de passe oublié?"
+
+msgid "Recuperar contraseña"
+msgstr "Récupérer le mot de passe"
+
+msgid "Cerrar sesión"
+msgstr "Se déconnecter"
+
+msgid "Dashboard Administrativo"
+msgstr "Tableau de bord administratif"
+
+msgid "Panel de Conductor"
+msgstr "Panneau du conducteur"
+
+msgid "Información Personal"
+msgstr "Informations personnelles"
+
+msgid "Datos del Conductor"
+msgstr "Données du conducteur"
+
+msgid "Nombre completo"
+msgstr "Nom complet"
+
+msgid "Documento"
+msgstr "Document"
+
+msgid "Correo"
+msgstr "E-mail"
+
+msgid "Teléfono"
+msgstr "Téléphone"
+
+msgid "Licencia de Conducción"
+msgstr "Permis de conduire"
+
+msgid "Categoría"
+msgstr "Catégorie"
+
+msgid "Fecha de vencimiento"
+msgstr "Date d'expiration"
+
+msgid "Vehículo Asignado"
+msgstr "Véhicule assigné"
+
+msgid "Datos del Vehículo"
+msgstr "Données du véhicule"
+
+msgid "Placa"
+msgstr "Plaque"
+
+msgid "Marca"
+msgstr "Marque"
+
+msgid "Modelo"
+msgstr "Modèle"
+
+msgid "Color"
+msgstr "Couleur"
+
+msgid "Información Adicional"
+msgstr "Informations supplémentaires"
+
+msgid "Tipo de Carrocería"
+msgstr "Type de carrosserie"
+
+msgid "Servicio"
+msgstr "Service"
+
+msgid "No hay vehículo asignado actualmente."
+msgstr "Aucun véhicule assigné actuellement."
+
+msgid "Estado Actual"
+msgstr "État actuel"
+
+msgid "Monitor de Fatiga"
+msgstr "Moniteur de fatigue"
+
+msgid "Estado"
+msgstr "État"
+
+msgid "Normal"
+msgstr "Normal"
+
+msgid "Precaución"
+msgstr "Attention"
+
+msgid "Alerta"
+msgstr "Alerte"
+
+msgid "Última actualización"
+msgstr "Dernière mise à jour"
+
+msgid "Monitoreo de Somnolencia"
+msgstr "Surveillance de la somnolence"
+
+msgid "Activar Cámara"
+msgstr "Activer la caméra"
+
+msgid "Desactivar Cámara"
+msgstr "Désactiver la caméra"
+
+msgid "Cámara desactivada"
+msgstr "Caméra désactivée"
+
+msgid "Cámara activa - Transmitiendo..."
+msgstr "Caméra active - Transmission..."
+
+msgid "Índice de Fatiga"
+msgstr "Indice de fatigue"
+
+msgid "Ubicación"
+msgstr "Emplacement"
+
+msgid "Obteniendo ubicación..."
+msgstr "Obtention de l'emplacement..."
+
+msgid "Ubicación no disponible"
+msgstr "Emplacement non disponible"
+
+msgid "ALERTA DE SOMNOLENCIA"
+msgstr "ALERTE DE SOMNOLENCE"
+
+msgid "Índice por debajo de 50. Por favor mantente alerta."
+msgstr "Indice en dessous de 50. Veuillez rester vigilant."

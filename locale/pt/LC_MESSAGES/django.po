@@ -52,3 +52,138 @@ msgstr "Francês"
 
 msgid "Português"
 msgstr "Português"
+
+msgid "Usuario"
+msgstr "Usuário"
+
+msgid "Contraseña"
+msgstr "Senha"
+
+msgid "Tipo de Usuario"
+msgstr "Tipo de usuário"
+
+msgid "¿Olvidaste tu contraseña?"
+msgstr "Esqueceu sua senha?"
+
+msgid "Recuperar contraseña"
+msgstr "Recuperar senha"
+
+msgid "Cerrar sesión"
+msgstr "Sair"
+
+msgid "Dashboard Administrativo"
+msgstr "Painel Administrativo"
+
+msgid "Panel de Conductor"
+msgstr "Painel do Motorista"
+
+msgid "Información Personal"
+msgstr "Informações Pessoais"
+
+msgid "Datos del Conductor"
+msgstr "Dados do Motorista"
+
+msgid "Nombre completo"
+msgstr "Nome completo"
+
+msgid "Documento"
+msgstr "Documento"
+
+msgid "Correo"
+msgstr "E-mail"
+
+msgid "Teléfono"
+msgstr "Telefone"
+
+msgid "Licencia de Conducción"
+msgstr "Licença de Condução"
+
+msgid "Categoría"
+msgstr "Categoria"
+
+msgid "Fecha de vencimiento"
+msgstr "Data de vencimento"
+
+msgid "Vehículo Asignado"
+msgstr "Veículo Atribuído"
+
+msgid "Datos del Vehículo"
+msgstr "Dados do Veículo"
+
+msgid "Placa"
+msgstr "Placa"
+
+msgid "Marca"
+msgstr "Marca"
+
+msgid "Modelo"
+msgstr "Modelo"
+
+msgid "Color"
+msgstr "Cor"
+
+msgid "Información Adicional"
+msgstr "Informações Adicionais"
+
+msgid "Tipo de Carrocería"
+msgstr "Tipo de Carroceria"
+
+msgid "Servicio"
+msgstr "Serviço"
+
+msgid "No hay vehículo asignado actualmente."
+msgstr "Nenhum veículo atribuído atualmente."
+
+msgid "Estado Actual"
+msgstr "Estado Atual"
+
+msgid "Monitor de Fatiga"
+msgstr "Monitor de Fadiga"
+
+msgid "Estado"
+msgstr "Estado"
+
+msgid "Normal"
+msgstr "Normal"
+
+msgid "Precaución"
+msgstr "Precaução"
+
+msgid "Alerta"
+msgstr "Alerta"
+
+msgid "Última actualización"
+msgstr "Última atualização"
+
+msgid "Monitoreo de Somnolencia"
+msgstr "Monitoramento de Sonolência"
+
+msgid "Activar Cámara"
+msgstr "Ativar Câmera"
+
+msgid "Desactivar Cámara"
+msgstr "Desativar Câmera"
+
+msgid "Cámara desactivada"
+msgstr "Câmera desativada"
+
+msgid "Cámara activa - Transmitiendo..."
+msgstr "Câmera ativa - Transmitindo..."
+
+msgid "Índice de Fatiga"
+msgstr "Índice de Fadiga"
+
+msgid "Ubicación"
+msgstr "Localização"
+
+msgid "Obteniendo ubicación..."
+msgstr "Obtendo localização..."
+
+msgid "Ubicación no disponible"
+msgstr "Localização não disponível"
+
+msgid "ALERTA DE SOMNOLENCIA"
+msgstr "ALERTA DE SONOLÊNCIA"
+
+msgid "Índice por debajo de 50. Por favor mantente alerta."
+msgstr "Índice abaixo de 50. Por favor, mantenha-se alerta."

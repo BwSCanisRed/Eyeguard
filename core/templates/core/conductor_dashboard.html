@@ -1,7 +1,8 @@
+{% load i18n %}
 <!DOCTYPE html>
-<html>
+<html lang="{{ LANGUAGE_CODE }}">
 <head>
-    <title>Dashboard Conductor - EyeGuard</title>
+    <title>{% trans "Panel de Conductor" %} - EyeGuard</title>
     <style>
         :root {
             --bg: #071026;
@@ -154,20 +155,59 @@
             70% { box-shadow:0 0 0 14px rgba(231,76,60,0); }
             100% { box-shadow:0 0 0 0 rgba(231,76,60,0); }
         }
+        .language-selector {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 8px;
+            background: var(--glass);
+            padding: 8px 12px;
+            border-radius: 30px;
+            border: 1px solid rgba(255,255,255,0.1);
+            z-index: 999;
+        }
+        .language-selector button {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            padding: 6px 12px;
+            border-radius: 8px;
+            color: var(--muted);
+        }
+        .language-selector button:hover {
+            transform: scale(1.05);
+            background: rgba(255,255,255,0.08);
+            color: var(--white);
+        }
+        .language-selector button.active {
+            background: var(--accent-green);
+            color: var(--white);
+        }
     </style>
 </head>
 <body>
+    <div class="language-selector">
+        <button onclick="changeLanguage('en')" title="English" id="lang-en">EN</button>
+        <button onclick="changeLanguage('es')" title="Español" id="lang-es" class="active">ES</button>
+        <button onclick="changeLanguage('de')" title="Deutsch" id="lang-de">DE</button>
+        <button onclick="changeLanguage('fr')" title="Français" id="lang-fr">FR</button>
+        <button onclick="changeLanguage('pt')" title="Português" id="lang-pt">PT</button>
+    </div>
     <div class="container">
         <div class="header">
             <div class="brand">
                 <div class="logo">EG</div>
                 <div>
-                    <h1 style="margin:0;font-size:1.2rem">EyeGuard - Panel de Conductor</h1>
+                    <h1 style="margin:0;font-size:1.2rem">EyeGuard - {% trans "Panel de Conductor" %}</h1>
                 </div>
             </div>
             <form method="post" action="{% url 'logout' %}" style="display:inline-block">
                 {% csrf_token %}
-                <button type="submit" class="btn">Cerrar sesión</button>
+                <button type="submit" class="btn">{% trans "Cerrar sesión" %}</button>
             </form>
         </div>
 
@@ -182,45 +222,45 @@
         {% endif %}
 
         <div class="card">
-            <h2>Información Personal</h2>
+            <h2>{% trans "Información Personal" %}</h2>
             <div class="info-grid">
                 <div class="info-item">
-                    <h3>Datos del Conductor</h3>
-                    <p><strong>Nombre completo:</strong> {{ request.user.perfil_conductor.nombre_completo }}</p>
-                    <p><strong>Documento:</strong> {{ request.user.perfil_conductor.documento }}</p>
-                    <p><strong>Correo:</strong> {{ request.user.email }}</p>
-                    <p><strong>Teléfono:</strong> {{ request.user.perfil_conductor.telefono }}</p>
+                    <h3>{% trans "Datos del Conductor" %}</h3>
+                    <p><strong>{% trans "Nombre completo" %}:</strong> {{ request.user.perfil_conductor.nombre_completo }}</p>
+                    <p><strong>{% trans "Documento" %}:</strong> {{ request.user.perfil_conductor.documento }}</p>
+                    <p><strong>{% trans "Correo" %}:</strong> {{ request.user.email }}</p>
+                    <p><strong>{% trans "Teléfono" %}:</strong> {{ request.user.perfil_conductor.telefono }}</p>
                 </div>
                 <div class="info-item">
-                    <h3>Licencia de Conducción</h3>
-                    <p><strong>Categoría:</strong> {{ request.user.perfil_conductor.licencia }}</p>
+                    <h3>{% trans "Licencia de Conducción" %}</h3>
+                    <p><strong>{% trans "Categoría" %}:</strong> {{ request.user.perfil_conductor.licencia }}</p>
                     {% if request.user.perfil_conductor.licencia_vencimiento %}
-                    <p><strong>Fecha de vencimiento:</strong> {{ request.user.perfil_conductor.licencia_vencimiento }}</p>
+                    <p><strong>{% trans "Fecha de vencimiento" %}:</strong> {{ request.user.perfil_conductor.licencia_vencimiento }}</p>
                     {% endif %}
                 </div>
             </div>
         </div>
 
         <div class="card">
-            <h2>Vehículo Asignado</h2>
+            <h2>{% trans "Vehículo Asignado" %}</h2>
             <div class="info-grid">
                 {% with vehiculo=request.user.perfil_conductor.vehiculos.first %}
                 {% if vehiculo %}
                 <div class="info-item">
-                    <h3>Datos del Vehículo</h3>
-                    <p><strong>Placa:</strong> {{ vehiculo.placa }}</p>
-                    <p><strong>Marca:</strong> {{ vehiculo.marca }}</p>
-                    <p><strong>Modelo:</strong> {{ vehiculo.modelo }}</p>
-                    <p><strong>Color:</strong> {{ vehiculo.color }}</p>
+                    <h3>{% trans "Datos del Vehículo" %}</h3>
+                    <p><strong>{% trans "Placa" %}:</strong> {{ vehiculo.placa }}</p>
+                    <p><strong>{% trans "Marca" %}:</strong> {{ vehiculo.marca }}</p>
+                    <p><strong>{% trans "Modelo" %}:</strong> {{ vehiculo.modelo }}</p>
+                    <p><strong>{% trans "Color" %}:</strong> {{ vehiculo.color }}</p>
                 </div>
                 <div class="info-item">
-                    <h3>Información Adicional</h3>
-                    <p><strong>Tipo de Carrocería:</strong> {{ vehiculo.tipo_carroceria }}</p>
-                    <p><strong>Servicio:</strong> {{ vehiculo.get_servicio_display }}</p>
+                    <h3>{% trans "Información Adicional" %}</h3>
+                    <p><strong>{% trans "Tipo de Carrocería" %}:</strong> {{ vehiculo.tipo_carroceria }}</p>
+                    <p><strong>{% trans "Servicio" %}:</strong> {{ vehiculo.get_servicio_display }}</p>
                 </div>
                 {% else %}
                 <div class="info-item">
-                    <p>No hay vehículo asignado actualmente.</p>
+                    <p>{% trans "No hay vehículo asignado actualmente." %}</p>
                 </div>
                 {% endif %}
                 {% endwith %}
@@ -228,32 +268,32 @@
         </div>
 
         <div class="card">
-            <h2>Estado Actual</h2>
+            <h2>{% trans "Estado Actual" %}</h2>
             <div class="info-grid">
                 <div class="info-item">
-                    <h3>Monitor de Fatiga</h3>
-                    <p><strong>Estado:</strong> 
+                    <h3>{% trans "Monitor de Fatiga" %}</h3>
+                    <p><strong>{% trans "Estado" %}:</strong> 
                         {% if request.user.perfil_conductor.estado_fatiga < 0.3 %}
-                            <span style="color: var(--accent-green)">Normal</span>
+                            <span style="color: var(--accent-green)">{% trans "Normal" %}</span>
                         {% elif request.user.perfil_conductor.estado_fatiga < 0.7 %}
-                            <span style="color: #ff9f43">Precaución</span>
+                            <span style="color: #ff9f43">{% trans "Precaución" %}</span>
                         {% else %}
-                            <span style="color: #ff4757">Alerta</span>
+                            <span style="color: #ff4757">{% trans "Alerta" %}</span>
                         {% endif %}
                     </p>
-                    <p><strong>Última actualización:</strong> {% now "j/n/Y H:i" %}</p>
+                    <p><strong>{% trans "Última actualización" %}:</strong> {% now "j/n/Y H:i" %}</p>
                 </div>
             </div>
         </div>
 
         <div class="card">
-            <h2>Monitoreo de Somnolencia</h2>
+            <h2>{% trans "Monitoreo de Somnolencia" %}</h2>
             <div style="text-align: center;">
                 <button id="toggleCameraBtn" class="btn" style="margin-bottom: 20px; cursor: pointer;">
-                    Activar Cámara
+                    {% trans "Activar Cámara" %}
                 </button>
                 <div id="cameraStatus" style="margin-bottom: 15px; color: var(--muted);">
-                    Cámara desactivada
+                    {% trans "Cámara desactivada" %}
                 </div>
                 <video id="videoElement" autoplay playsinline style="width: 100%; max-width: 640px; border-radius: 8px; display: none; background: black;"></video>
                 <canvas id="canvas" style="display: none;"></canvas>
@@ -261,11 +301,11 @@
                     <strong>📍 Ubicación:</strong> <span id="locationText" style="color: var(--muted);">Obteniendo ubicación...</span>
                 </div>
                 <div id="fatigueScore" style="margin-top: 15px; font-size: 1.2rem; display: none;">
-                    <strong>Índice de Fatiga:</strong> <span id="scoreValue" style="color: var(--accent-green);">0</span>
+                    <strong>{% trans "Índice de Fatiga" %}:</strong> <span id="scoreValue" style="color: var(--accent-green);">0</span>
                 </div>
                 <div id="fatigueRiskAlert">
-                    ⚠️ ALERTA DE SOMNOLENCIA
-                    <span>Índice por debajo de 50. Por favor mantente alerta.</span>
+                    ⚠️ {% trans "ALERTA DE SOMNOLENCIA" %}
+                    <span>{% trans "Índice por debajo de 50. Por favor mantente alerta." %}</span>
                 </div>
             </div>
         </div>
@@ -325,9 +365,9 @@
                 
                 video.style.display = 'block';
                 isStreaming = true;
-                toggleBtn.textContent = 'Desactivar Cámara';
+                toggleBtn.textContent = '{% trans "Desactivar Cámara" %}';
                 toggleBtn.style.background = 'linear-gradient(90deg, #e74c3c, #c0392b)';
-                statusDiv.textContent = 'Cámara activa - Transmitiendo...';
+                statusDiv.textContent = '{% trans "Cámara activa - Transmitiendo..." %}';
                 statusDiv.style.color = 'var(--accent-green)';
                 fatigueScoreDiv.style.display = 'block';
                 
@@ -375,9 +415,9 @@
             
             isStreaming = false;
             uploading = false;
-            toggleBtn.textContent = 'Activar Cámara';
+            toggleBtn.textContent = '{% trans "Activar Cámara" %}';
             toggleBtn.style.background = 'linear-gradient(90deg, var(--accent-green), var(--accent-magenta))';
-            statusDiv.textContent = 'Cámara desactivada';
+            statusDiv.textContent = '{% trans "Cámara desactivada" %}';
             statusDiv.style.color = 'var(--muted)';
             fatigueScoreDiv.style.display = 'none';
             locationInfo.style.display = 'none';
@@ -565,6 +605,21 @@
                 stopCamera();
             }
         });
+
+        // Language selector logic
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentLang = getCookie('django_language') || 'es';
+            document.querySelectorAll('.language-selector button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            const activeBtn = document.getElementById('lang-' + currentLang);
+            if (activeBtn) activeBtn.classList.add('active');
+        });
+
+        function changeLanguage(langCode) {
+            document.cookie = 'django_language=' + langCode + '; path=/; max-age=31536000';
+            window.location.reload();
+        }
     </script>
 </body>
 </html>

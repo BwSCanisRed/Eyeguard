@@ -52,3 +52,138 @@ msgstr "French"
 
 msgid "Português"
 msgstr "Portuguese"
+
+msgid "Usuario"
+msgstr "Username"
+
+msgid "Contraseña"
+msgstr "Password"
+
+msgid "Tipo de Usuario"
+msgstr "User Type"
+
+msgid "¿Olvidaste tu contraseña?"
+msgstr "Forgot your password?"
+
+msgid "Recuperar contraseña"
+msgstr "Recover password"
+
+msgid "Cerrar sesión"
+msgstr "Logout"
+
+msgid "Dashboard Administrativo"
+msgstr "Administrative Dashboard"
+
+msgid "Panel de Conductor"
+msgstr "Driver Panel"
+
+msgid "Información Personal"
+msgstr "Personal Information"
+
+msgid "Datos del Conductor"
+msgstr "Driver Data"
+
+msgid "Nombre completo"
+msgstr "Full name"
+
+msgid "Documento"
+msgstr "Document"
+
+msgid "Correo"
+msgstr "Email"
+
+msgid "Teléfono"
+msgstr "Phone"
+
+msgid "Licencia de Conducción"
+msgstr "Driver License"
+
+msgid "Categoría"
+msgstr "Category"
+
+msgid "Fecha de vencimiento"
+msgstr "Expiration date"
+
+msgid "Vehículo Asignado"
+msgstr "Assigned Vehicle"
+
+msgid "Datos del Vehículo"
+msgstr "Vehicle Data"
+
+msgid "Placa"
+msgstr "License Plate"
+
+msgid "Marca"
+msgstr "Brand"
+
+msgid "Modelo"
+msgstr "Model"
+
+msgid "Color"
+msgstr "Color"
+
+msgid "Información Adicional"
+msgstr "Additional Information"
+
+msgid "Tipo de Carrocería"
+msgstr "Body Type"
+
+msgid "Servicio"
+msgstr "Service"
+
+msgid "No hay vehículo asignado actualmente."
+msgstr "No vehicle currently assigned."
+
+msgid "Estado Actual"
+msgstr "Current Status"
+
+msgid "Monitor de Fatiga"
+msgstr "Fatigue Monitor"
+
+msgid "Estado"
+msgstr "Status"
+
+msgid "Normal"
+msgstr "Normal"
+
+msgid "Precaución"
+msgstr "Caution"
+
+msgid "Alerta"
+msgstr "Alert"
+
+msgid "Última actualización"
+msgstr "Last update"
+
+msgid "Monitoreo de Somnolencia"
+msgstr "Drowsiness Monitoring"
+
+msgid "Activar Cámara"
+msgstr "Activate Camera"
+
+msgid "Desactivar Cámara"
+msgstr "Deactivate Camera"
+
+msgid "Cámara desactivada"
+msgstr "Camera deactivated"
+
+msgid "Cámara activa - Transmitiendo..."
+msgstr "Camera active - Streaming..."
+
+msgid "Índice de Fatiga"
+msgstr "Fatigue Index"
+
+msgid "Ubicación"
+msgstr "Location"
+
+msgid "Obteniendo ubicación..."
+msgstr "Getting location..."
+
+msgid "Ubicación no disponible"
+msgstr "Location unavailable"
+
+msgid "ALERTA DE SOMNOLENCIA"
+msgstr "DROWSINESS ALERT"
+
+msgid "Índice por debajo de 50. Por favor mantente alerta."
+msgstr "Index below 50. Please stay alert."
