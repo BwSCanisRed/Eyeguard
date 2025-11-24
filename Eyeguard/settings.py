@@ -160,6 +160,15 @@ LOCALE_PATHS = [
     BASE_DIR / 'locale',
 ]
 
+# Configuración de cookies para idioma
+LANGUAGE_COOKIE_NAME = 'django_language'
+LANGUAGE_COOKIE_AGE = 365 * 24 * 60 * 60  # 1 año
+LANGUAGE_COOKIE_DOMAIN = None
+LANGUAGE_COOKIE_PATH = '/'
+LANGUAGE_COOKIE_SECURE = False  # True en producción con HTTPS
+LANGUAGE_COOKIE_HTTPONLY = False
+LANGUAGE_COOKIE_SAMESITE = 'Lax'
+
 TIME_ZONE = 'UTC'
 
 USE_I18N = True

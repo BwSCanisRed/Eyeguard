@@ -13,9 +13,16 @@ def set_language(request):
         language = request.POST.get('language')
         next_url = request.POST.get('next', '/')
         if language:
-            request.session['django_language'] = language
             translation.activate(language)
-        return redirect(next_url)
+            response = redirect(next_url)
+            response.set_cookie(
+                'django_language',
+                language,
+                max_age=365 * 24 * 60 * 60,  # 1 año
+                path='/',
+                samesite='Lax'
+            )
+            return response
     return redirect('home')
 
 def home(request):
