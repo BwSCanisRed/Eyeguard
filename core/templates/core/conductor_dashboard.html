@@ -257,6 +257,9 @@
                 </div>
                 <video id="videoElement" autoplay playsinline style="width: 100%; max-width: 640px; border-radius: 8px; display: none; background: black;"></video>
                 <canvas id="canvas" style="display: none;"></canvas>
+                <div id="locationInfo" style="margin-top: 15px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; display: none;">
+                    <strong>📍 Ubicación:</strong> <span id="locationText" style="color: var(--muted);">Obteniendo ubicación...</span>
+                </div>
                 <div id="fatigueScore" style="margin-top: 15px; font-size: 1.2rem; display: none;">
                     <strong>Índice de Fatiga:</strong> <span id="scoreValue" style="color: var(--accent-green);">0</span>
                 </div>
@@ -276,7 +279,9 @@
         const statusDiv = document.getElementById('cameraStatus');
         const fatigueScoreDiv = document.getElementById('fatigueScore');
         const scoreValue = document.getElementById('scoreValue');
-    const fatigueRiskAlert = document.getElementById('fatigueRiskAlert');
+        const fatigueRiskAlert = document.getElementById('fatigueRiskAlert');
+        const locationInfo = document.getElementById('locationInfo');
+        const locationText = document.getElementById('locationText');
         
         let stream = null;
         let isStreaming = false;
@@ -284,6 +289,7 @@
         let uploading = false;
         let targetInterval = 200;
         let frameTimeout = null;
+        let userLocation = null;
 
         toggleBtn.addEventListener('click', async () => {
             if (!isStreaming) {
@@ -324,6 +330,9 @@
                 statusDiv.textContent = 'Cámara activa - Transmitiendo...';
                 statusDiv.style.color = 'var(--accent-green)';
                 fatigueScoreDiv.style.display = 'block';
+                
+                // Obtener ubicación GPS
+                getLocation();
 
                 // Esperar a que el video esté listo
                 video.onloadedmetadata = () => {
@@ -371,6 +380,8 @@
             statusDiv.textContent = 'Cámara desactivada';
             statusDiv.style.color = 'var(--muted)';
             fatigueScoreDiv.style.display = 'none';
+            locationInfo.style.display = 'none';
+            userLocation = null;
 
             // Notificar al servidor que se detuvo la transmisión
             fetch('/conductor/stop_stream/', {
@@ -469,6 +480,83 @@
                 }
             }
             return cookieValue;
+        }
+
+        function getLocation() {
+            locationInfo.style.display = 'block';
+            
+            if (!navigator.geolocation) {
+                locationText.textContent = 'Geolocalización no disponible en este navegador';
+                locationText.style.color = '#ff9f43';
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    userLocation = { lat, lon };
+                    
+                    // Mostrar coordenadas inmediatamente
+                    locationText.textContent = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+                    locationText.style.color = 'var(--accent-green)';
+                    
+                    // Intentar obtener dirección legible usando Nominatim (OpenStreetMap)
+                    try {
+                        const response = await fetch(
+                            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`,
+                            {
+                                headers: {
+                                    'User-Agent': 'EyeGuard/1.0'
+                                }
+                            }
+                        );
+                        const data = await response.json();
+                        
+                        if (data && data.display_name) {
+                            // Mostrar dirección legible
+                            const address = data.address;
+                            let shortAddress = '';
+                            
+                            if (address.road) shortAddress += address.road;
+                            if (address.city) shortAddress += (shortAddress ? ', ' : '') + address.city;
+                            else if (address.town) shortAddress += (shortAddress ? ', ' : '') + address.town;
+                            else if (address.municipality) shortAddress += (shortAddress ? ', ' : '') + address.municipality;
+                            if (address.state) shortAddress += (shortAddress ? ', ' : '') + address.state;
+                            
+                            locationText.textContent = shortAddress || data.display_name.substring(0, 50);
+                            locationText.title = `Coordenadas: ${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+                        }
+                    } catch (error) {
+                        console.log('No se pudo obtener dirección, mostrando coordenadas');
+                        // Las coordenadas ya están mostradas
+                    }
+                },
+                (error) => {
+                    console.error('Error al obtener ubicación:', error);
+                    let errorMsg = 'No se pudo obtener ubicación';
+                    
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMsg = 'Permiso de ubicación denegado';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMsg = 'Ubicación no disponible';
+                            break;
+                        case error.TIMEOUT:
+                            errorMsg = 'Tiempo de espera agotado';
+                            break;
+                    }
+                    
+                    locationText.textContent = errorMsg;
+                    locationText.style.color = '#ff9f43';
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                }
+            );
         }
 
         // Detener la cámara cuando se cierre la página
