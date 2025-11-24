@@ -589,6 +589,9 @@
                                             <div class="placa-badge">{{ conductor.vehiculos.first.placa }}</div>
                                         {% endif %}
                                     </div>
+                                    <div id="location-{{ conductor.id }}" style="font-size:0.85rem;color:#9aa4b2;margin-bottom:10px;">
+                                        <strong>📍 Ubicación:</strong> <span class="loc-text">Sin datos</span>
+                                    </div>
 
                                     <form method="post" action="{% url 'delete_conductor' conductor.id %}" onsubmit="return confirm('¿Eliminar conductor {{ conductor.nombre_completo }}? Esta acción es irreversible.');">
                                         {% csrf_token %}
@@ -701,6 +704,26 @@
                 });
         }
 
+        function actualizarUbicaciones() {
+            return fetch('/api/conductores_ubicaciones/')
+                .then(resp => resp.json())
+                .then(data => {
+                    const ubicaciones = data.ubicaciones || {};
+                    Object.entries(ubicaciones).forEach(([cid, loc]) => {
+                        const el = document.getElementById('location-' + cid);
+                        if (el) {
+                            const span = el.querySelector('.loc-text');
+                            if (span) {
+                                span.textContent = `${parseFloat(loc.lat).toFixed(6)}, ${parseFloat(loc.lon).toFixed(6)}`;
+                                span.style.color = 'var(--accent-green)';
+                            }
+                        }
+                    });
+                }).catch(err => {
+                    // silencioso
+                });
+        }
+
         // iniciar polling cada 2s cuando se abra la pestaña de monitoreo
         setInterval(function(){
             // solo actualizar si la pestaña monitoreo está visible
@@ -708,6 +731,7 @@
             if (monitoreo && monitoreo.style.display !== 'none') {
                 actualizarScores();
                 actualizarEstadoStreaming();
+                actualizarUbicaciones();
             }
         }, 2000);
 
@@ -722,7 +746,8 @@
             // Ejecutar actualización
             Promise.all([
                 actualizarScores(),
-                actualizarEstadoStreaming()
+                actualizarEstadoStreaming(),
+                actualizarUbicaciones()
             ]).finally(() => {
                 setTimeout(() => {
                     btn.disabled = false;

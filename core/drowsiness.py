@@ -338,7 +338,8 @@ def process_frame_for_conductor(conductor, frame):
                 min_tracking_confidence=0.5
             ),
             'chin_positions': [],  # Para detectar cabeceo
-            'sustained_drowsy_start': None  # Marca cuando empieza somnolencia sostenida
+            'sustained_drowsy_start': None,  # Marca cuando empieza somnolencia sostenida
+            'location': None  # {'lat': float, 'lon': float, 'timestamp': float}
         }
     
     state = _conductor_states[conductor_id]
@@ -524,3 +525,49 @@ def stop_stream_for(conductor):
         _conductor_states[conductor_id]['last_jpeg'] = None
         print(f"[INFO] Stream detenido para conductor {conductor_id}, limpiando frames")
         del _conductor_states[conductor_id]
+
+
+def update_location_for(conductor, lat, lon):
+    """Actualiza la ubicación actual (lat, lon) para el conductor en memoria.
+    Se guarda solo en memoria para mostrar en el dashboard del administrador.
+    """
+    try:
+        lat_f = float(lat)
+        lon_f = float(lon)
+    except (TypeError, ValueError):
+        return
+    conductor_id = str(conductor.id)
+    if conductor_id not in _conductor_states:
+        # Inicializar estado mínimo si llega ubicación antes de frame
+        _conductor_states[conductor_id] = {
+            'score': SCORE_START,
+            'frames_no_eyes': 0,
+            'frames_eyes_closed': 0,
+            'last_alert': 0,
+            'last_jpeg': None,
+            'last_update': time.time(),
+            'lock': threading.Lock(),
+            'chin_positions': [],
+            'sustained_drowsy_start': None,
+            'location': None
+        }
+    state = _conductor_states[conductor_id]
+    state['location'] = {
+        'lat': lat_f,
+        'lon': lon_f,
+        'timestamp': time.time()
+    }
+
+
+def get_locations_snapshot():
+    """Retorna un dict {conductor_id: {lat, lon, timestamp}} de las ubicaciones actuales."""
+    snapshot = {}
+    for cid, state in _conductor_states.items():
+        loc = state.get('location')
+        if loc:
+            snapshot[cid] = {
+                'lat': loc['lat'],
+                'lon': loc['lon'],
+                'timestamp': loc['timestamp']
+            }
+    return snapshot

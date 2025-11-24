@@ -291,6 +291,15 @@ def conductor_send_frame(request):
         if frame is None:
             return JsonResponse({'error': 'Invalid frame'}, status=400)
         
+        # Actualizar ubicación si viene en el POST
+        lat = request.POST.get('lat')
+        lon = request.POST.get('lon')
+        if lat and lon:
+            try:
+                drowsiness.update_location_for(conductor, lat, lon)
+            except Exception:
+                pass
+
         # Procesar con el detector de somnolencia
         score = drowsiness.process_frame_for_conductor(conductor, frame)
         
@@ -353,6 +362,19 @@ def conductores_activos(request):
     return JsonResponse({
         'conductores_activos': [str(c_id) for c_id in conductores_streaming]
     })
+
+
+@login_required
+def conductores_ubicaciones(request):
+    """Retorna las ubicaciones en memoria de los conductores que hayan enviado coordenadas."""
+    snapshot = drowsiness.get_locations_snapshot()
+    # Filtrar solo conductores autenticados activos para evitar basura antigua
+    activos_ids = set(str(cid) for cid in Conductor.objects.filter(autenticado=True).values_list('id', flat=True))
+    ubicaciones = {}
+    for cid, loc in snapshot.items():
+        if cid in activos_ids:
+            ubicaciones[cid] = loc
+    return JsonResponse({'ubicaciones': ubicaciones})
 
 
 def password_reset(request):

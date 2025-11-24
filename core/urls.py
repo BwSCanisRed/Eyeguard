@@ -19,5 +19,6 @@ urlpatterns = [
     path('conductor/send_frame/', views.conductor_send_frame, name='conductor_send_frame'),
     path('conductor/stop_stream/', views.conductor_stop_stream, name='conductor_stop_stream'),
     path('api/conductores_activos/', views.conductores_activos, name='conductores_activos'),
+    path('api/conductores_ubicaciones/', views.conductores_ubicaciones, name='conductores_ubicaciones'),
 ]
     

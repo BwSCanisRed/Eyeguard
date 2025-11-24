@@ -464,6 +464,10 @@
 
                     const formData = new FormData();
                     formData.append('frame', blob, 'frame.jpg');
+                    if (userLocation) {
+                        formData.append('lat', userLocation.lat);
+                        formData.append('lon', userLocation.lon);
+                    }
                     
                     const response = await fetch('/conductor/send_frame/', {
                         method: 'POST',
