@@ -13,5 +13,5 @@ fi
 # Recolectar archivos estáticos
 python manage.py collectstatic --no-input
 
-# Ejecutar migraciones
-python manage.py migrate
+# Las migraciones se ejecutan en runtime (startCommand en Render),
+# para evitar fallos de conexión a DB en fase de build.

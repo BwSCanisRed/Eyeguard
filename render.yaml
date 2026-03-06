@@ -6,7 +6,7 @@ services:
     plan: free
     branch: main
     buildCommand: "./build.sh"
-    startCommand: "python manage.py create_default_admin && gunicorn Eyeguard.wsgi:application --workers 1 --threads 8 --worker-class gthread --timeout 300"
+    startCommand: "python manage.py migrate && python manage.py create_default_admin && gunicorn Eyeguard.wsgi:application --workers 1 --threads 8 --worker-class gthread --timeout 300"
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.0"
