@@ -3,12 +3,40 @@ import numpy as np
 import threading
 import time
 import math
-import mediapipe as mp
+try:
+    import mediapipe as mp
+except Exception:
+    mp = None
 
 # Simple manager que mantiene un hilo por fuente de cámara (por conductor)
 # y ofrece un frame MJPEG y un puntaje actual en memoria.
 
-mp_face_mesh = mp.solutions.face_mesh
+mp_face_mesh = None
+if mp is not None:
+    try:
+        if hasattr(mp, 'solutions') and hasattr(mp.solutions, 'face_mesh'):
+            mp_face_mesh = mp.solutions.face_mesh
+        else:
+            # Fallback para builds donde 'solutions' no viene expuesto en el root.
+            from mediapipe.python.solutions import face_mesh as _face_mesh
+            mp_face_mesh = _face_mesh
+    except Exception:
+        mp_face_mesh = None
+
+
+def _create_face_mesh():
+    if mp_face_mesh is None:
+        return None
+    try:
+        return mp_face_mesh.FaceMesh(
+            max_num_faces=1,
+            refine_landmarks=True,
+            min_detection_confidence=0.5,
+            min_tracking_confidence=0.5,
+        )
+    except Exception as e:
+        print(f"[WARN] No se pudo crear FaceMesh: {e}")
+        return None
 
 LEFT_EYE_IDX = [33, 160, 158, 133, 153, 144]
 RIGHT_EYE_IDX = [362, 385, 387, 263, 373, 380]
@@ -77,8 +105,7 @@ class StreamState:
             self.running = False
             return
 
-        face_mesh = mp_face_mesh.FaceMesh(max_num_faces=1, refine_landmarks=True,
-                                         min_detection_confidence=0.5, min_tracking_confidence=0.5)
+        face_mesh = _create_face_mesh()
 
         frames_no_eyes = 0
         frames_eyes_closed = 0
@@ -90,14 +117,14 @@ class StreamState:
                 break
             h, w = frame.shape[:2]
             rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            results = face_mesh.process(rgb)
+            results = face_mesh.process(rgb) if face_mesh else None
 
             ojos_detectados = False
             boca_detectada = False
             head_down = False
             ear = 0.0
 
-            if results.multi_face_landmarks:
+            if results and results.multi_face_landmarks:
                 face_landmarks = results.multi_face_landmarks[0]
                 lm = face_landmarks.landmark
                 pts = [(int(p.x * w), int(p.y * h)) for p in lm]
@@ -149,7 +176,7 @@ class StreamState:
                     cv2.putText(frame, "HEAD DOWN", (10, 120), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0,0,255), 2)
 
             # lógica de puntaje
-            tiene_cara = bool(results.multi_face_landmarks)
+            tiene_cara = bool(results and results.multi_face_landmarks)
             if not ojos_detectados and tiene_cara:
                 frames_no_eyes += 1
             else:
@@ -200,7 +227,8 @@ class StreamState:
             time.sleep(0.03)
 
         cap.release()
-        face_mesh.close()
+        if face_mesh and hasattr(face_mesh, 'close'):
+            face_mesh.close()
         self.running = False
 
     def start(self):
@@ -331,12 +359,7 @@ def process_frame_for_conductor(conductor, frame):
             'last_jpeg': None,
             'last_update': time.time(),
             'lock': threading.Lock(),
-            'face_mesh': mp_face_mesh.FaceMesh(
-                max_num_faces=1,
-                refine_landmarks=True,
-                min_detection_confidence=0.5,
-                min_tracking_confidence=0.5
-            ),
+            'face_mesh': _create_face_mesh(),
             'chin_positions': [],  # Para detectar cabeceo
             'sustained_drowsy_start': None,  # Marca cuando empieza somnolencia sostenida
             'location': None  # {'lat': float, 'lon': float, 'timestamp': float}
@@ -353,19 +376,15 @@ def process_frame_for_conductor(conductor, frame):
         
         # Manejar errores de timestamp de MediaPipe
         try:
-            results = face_mesh.process(rgb)
+            results = face_mesh.process(rgb) if face_mesh else None
         except ValueError as e:
             if "timestamp" in str(e).lower():
                 print(f"[WARN] MediaPipe timestamp error para {conductor_id}, reiniciando FaceMesh")
-                state['face_mesh'].close()
-                state['face_mesh'] = mp_face_mesh.FaceMesh(
-                    max_num_faces=1,
-                    refine_landmarks=True,
-                    min_detection_confidence=0.5,
-                    min_tracking_confidence=0.5
-                )
+                if state.get('face_mesh') and hasattr(state['face_mesh'], 'close'):
+                    state['face_mesh'].close()
+                state['face_mesh'] = _create_face_mesh()
                 face_mesh = state['face_mesh']
-                results = face_mesh.process(rgb)
+                results = face_mesh.process(rgb) if face_mesh else None
             else:
                 raise
         
@@ -375,7 +394,7 @@ def process_frame_for_conductor(conductor, frame):
         head_nod_detected = False
         ear = 0.0
         
-        if results.multi_face_landmarks:
+        if results and results.multi_face_landmarks:
             face_landmarks = results.multi_face_landmarks[0]
             lm = face_landmarks.landmark
             pts = [(int(p.x * w), int(p.y * h)) for p in lm]
@@ -434,7 +453,7 @@ def process_frame_for_conductor(conductor, frame):
                 head_down = False
         
         # Lógica de puntaje mejorada
-        tiene_cara = bool(results.multi_face_landmarks)
+        tiene_cara = bool(results and results.multi_face_landmarks)
         
         if not ojos_detectados and tiene_cara:
             state['frames_no_eyes'] += 1
