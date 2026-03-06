@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 import os
 import dj_database_url
+from urllib.parse import urlparse, urlunparse
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -101,10 +102,44 @@ AUTH_USER_MODEL = 'core.Usuario'
 
 # Usar DATABASE_URL si está disponible (para Render u otros servicios)
 # sino usar configuración local
-if os.environ.get('DATABASE_URL'):
+database_url = os.environ.get('DATABASE_URL')
+
+# En algunos casos, Render puede exponer un host corto (sin dominio).
+# Si detectamos ese formato, lo normalizamos para evitar errores DNS.
+if database_url:
+    try:
+        parsed = urlparse(database_url)
+        host = parsed.hostname or ''
+        if host and '.' not in host:
+            render_region = os.environ.get('RENDER_REGION', 'oregon')
+            fixed_host = f"{host}.{render_region}-postgres.render.com"
+
+            userinfo = ''
+            if parsed.username:
+                userinfo = parsed.username
+                if parsed.password:
+                    userinfo += f":{parsed.password}"
+                userinfo += '@'
+
+            fixed_netloc = f"{userinfo}{fixed_host}"
+            if parsed.port:
+                fixed_netloc += f":{parsed.port}"
+
+            database_url = urlunparse((
+                parsed.scheme,
+                fixed_netloc,
+                parsed.path,
+                parsed.params,
+                parsed.query,
+                parsed.fragment,
+            ))
+    except Exception:
+        pass
+
+if database_url:
     DATABASES = {
         'default': dj_database_url.config(
-            default=os.environ.get('DATABASE_URL'),
+            default=database_url,
             conn_max_age=600,
             conn_health_checks=True,
         )
