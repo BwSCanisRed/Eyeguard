@@ -352,7 +352,7 @@
         let isStreaming = false;
         let sendInterval = null;
         let uploading = false;
-        let targetInterval = 100;
+        let targetInterval = 50;
         let frameTimeout = null;
         let userLocation = null;
 
@@ -470,7 +470,7 @@
                     ctx.imageSmoothingEnabled = true;
                     
                     // Scheduler adaptativo para iOS (evita solapamiento)
-                    targetInterval = isiOS ? 150 : 100;
+                    targetInterval = isiOS ? 80 : 50;
                     scheduleNext();
                 };
 
@@ -603,7 +603,7 @@
                 } finally {
                     const dt = performance.now() - t0;
                     // Adaptar intervalo dinámicamente según latencia de red
-                    const adaptiveInterval = Math.min(400, Math.max(80, Math.round(dt * 1.1)));
+                    const adaptiveInterval = Math.min(200, Math.max(40, Math.round(dt * 1.0)));
                     targetInterval = adaptiveInterval;
                     uploading = false;
                     scheduleNext();
