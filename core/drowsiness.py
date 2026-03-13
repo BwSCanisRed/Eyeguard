@@ -366,6 +366,21 @@ def process_frame_for_conductor(conductor, frame):
         }
     
     state = _conductor_states[conductor_id]
+
+    # Compatibilidad: si el estado fue creado por update_location_for,
+    # puede venir incompleto. Completamos claves críticas aquí.
+    if 'lock' not in state:
+        state['lock'] = threading.Lock()
+    if 'face_mesh' not in state:
+        state['face_mesh'] = _create_face_mesh()
+    state.setdefault('frames_no_eyes', 0)
+    state.setdefault('frames_eyes_closed', 0)
+    state.setdefault('last_alert', 0)
+    state.setdefault('last_jpeg', None)
+    state.setdefault('last_update', time.time())
+    state.setdefault('chin_positions', [])
+    state.setdefault('sustained_drowsy_start', None)
+    state.setdefault('score', SCORE_START)
     
     # Usar lock para evitar procesamiento concurrente
     with state['lock']:
@@ -557,7 +572,7 @@ def update_location_for(conductor, lat, lon):
         return
     conductor_id = str(conductor.id)
     if conductor_id not in _conductor_states:
-        # Inicializar estado mínimo si llega ubicación antes de frame
+        # Inicializar estado completo para evitar KeyError en procesamiento posterior.
         _conductor_states[conductor_id] = {
             'score': SCORE_START,
             'frames_no_eyes': 0,
@@ -566,6 +581,7 @@ def update_location_for(conductor, lat, lon):
             'last_jpeg': None,
             'last_update': time.time(),
             'lock': threading.Lock(),
+            'face_mesh': _create_face_mesh(),
             'chin_positions': [],
             'sustained_drowsy_start': None,
             'location': None
