@@ -103,24 +103,25 @@ EAR_THRESHOLD = 0.24
 EAR_CONSEC_FRAMES = 2
 NO_EYES_CONSEC_FRAMES = 5
 MOUTH_OPEN_THRESHOLD = 0.22
-HEAD_DOWN_THRESHOLD = 0.14
+HEAD_DOWN_THRESHOLD = 0.20
 HEAD_NOD_THRESHOLD = 0.05
-HEAD_DOWN_CONSEC_FRAMES = 3
-HEAD_NOD_CONSEC_FRAMES = 2
-NORMAL_STREAK_BOOST_FRAMES = 8
+HEAD_DOWN_CONSEC_FRAMES = 6
+HEAD_NOD_CONSEC_FRAMES = 1
+NORMAL_STREAK_BOOST_FRAMES = 4
 SCORE_START = 100
 SCORE_MIN = 0
 SCORE_MAX = 100
-SCORE_DECREMENT_EYES_CLOSED = 6.0    # Ojos cerrados: caída rápida
-SCORE_DECREMENT_NO_EYES = 4.0        # Sin ojos detectados
+SCORE_DECREMENT_EYES_CLOSED = 9.0    # Ojos cerrados: caída rápida
+SCORE_DECREMENT_NO_EYES = 6.0        # Sin ojos detectados
+SCORE_DECREMENT_PROLONGED_EYES = 8.0 # Ojos cerrados prolongados
 SCORE_INCREMENT_EYES_OPEN = 2.0      # Recuperación moderada-alta
 SCORE_INCREMENT_BASELINE = 1.2       # Recuperación cuando hay cara estable
-SCORE_INCREMENT_NORMAL_BOOST = 2.8   # Recuperación fuerte en racha normal
+SCORE_INCREMENT_NORMAL_BOOST = 3.5   # Recuperación fuerte en racha normal
 SCORE_DECREMENT_YAWN = 3.0
-SCORE_DECREMENT_HEAD_DOWN = 8.0      # Cabeza inclinada: penalización fuerte
-SCORE_DECREMENT_HEAD_NOD = 6.0       # Cabeceo: muy agresivo
+SCORE_DECREMENT_HEAD_DOWN = 2.0      # Cabeza inclinada: leve, solo si persiste
+SCORE_DECREMENT_HEAD_NOD = 10.0      # Cabeceo: muy agresivo
 SCORE_DECREMENT_NOD_EYES = 10.0      # Cabeceo + ojos cerrados: máxima penalización
-SCORE_DECREMENT_NO_FACE = 1.0        # Sin cara detectada
+SCORE_DECREMENT_NO_FACE = 0.6        # Sin cara detectada
 ALERT_THRESHOLD = 50
 ALERT_COOLDOWN = 3
 
@@ -421,6 +422,7 @@ def process_frame_for_conductor(conductor, frame):
             'last_alert': 0,
             'last_jpeg': None,
             'last_jpeg_encode': 0.0,
+            'last_process_time': time.time(),
             'last_update': time.time(),
             'lock': threading.Lock(),
             'face_mesh': _create_face_mesh(),
@@ -447,6 +449,7 @@ def process_frame_for_conductor(conductor, frame):
     state.setdefault('last_alert', 0)
     state.setdefault('last_jpeg', None)
     state.setdefault('last_jpeg_encode', 0.0)
+    state.setdefault('last_process_time', time.time())
     state.setdefault('last_update', time.time())
     if not isinstance(state.get('chin_positions'), deque):
         state['chin_positions'] = deque(state.get('chin_positions', []), maxlen=8)
@@ -457,6 +460,13 @@ def process_frame_for_conductor(conductor, frame):
     
     # Usar lock para evitar procesamiento concurrente
     with state['lock']:
+        process_now = time.time()
+        prev_process = state.get('last_process_time', process_now - 0.05)
+        dt = max(0.01, process_now - prev_process)
+        state['last_process_time'] = process_now
+        # Normaliza el impacto cuando llegan menos frames (red/dispositivo lento).
+        frame_factor = max(0.8, min(3.0, dt / 0.05))
+
         face_mesh = state['face_mesh']
         analysis_frame = _resize_for_analysis(frame)
         h, w = analysis_frame.shape[:2]
@@ -584,22 +594,25 @@ def process_frame_for_conductor(conductor, frame):
         if not tiene_cara:
             # Evita castigar misses breves de detección cuando el conductor está normal.
             if state['no_face_streak'] > NO_FACE_GRACE_FRAMES:
-                state['score'] -= SCORE_DECREMENT_NO_FACE
+                state['score'] -= SCORE_DECREMENT_NO_FACE * frame_factor
         elif state['frames_no_eyes'] >= NO_EYES_CONSEC_FRAMES:
-            state['score'] -= SCORE_DECREMENT_NO_EYES * time_multiplier
+            state['score'] -= SCORE_DECREMENT_NO_EYES * time_multiplier * frame_factor
         else:
             if ojos_detectados:
-                state['score'] += SCORE_INCREMENT_EYES_OPEN
+                state['score'] += SCORE_INCREMENT_EYES_OPEN * min(frame_factor, 1.8)
             elif (tiene_cara and not boca_detectada and not head_down and not head_nod_detected 
                   and state['frames_eyes_closed'] == 0 and state['frames_no_eyes'] < NO_EYES_CONSEC_FRAMES):
                 # Recuperación suave aunque no haya ojos válidos por ruido temporal.
-                state['score'] += SCORE_INCREMENT_BASELINE
+                state['score'] += SCORE_INCREMENT_BASELINE * min(frame_factor, 1.8)
         
         if state['frames_eyes_closed'] >= EAR_CONSEC_FRAMES:
-            state['score'] -= SCORE_DECREMENT_EYES_CLOSED * time_multiplier
+            eyes_penalty = SCORE_DECREMENT_EYES_CLOSED * time_multiplier * frame_factor
+            if state['frames_eyes_closed'] >= 4:
+                eyes_penalty += SCORE_DECREMENT_PROLONGED_EYES * time_multiplier * frame_factor
+            state['score'] -= eyes_penalty
         
         if boca_detectada:
-            state['score'] -= SCORE_DECREMENT_YAWN
+            state['score'] -= SCORE_DECREMENT_YAWN * frame_factor
         
         if head_down:
             state['head_down_frames'] += 1
@@ -615,13 +628,13 @@ def process_frame_for_conductor(conductor, frame):
         effective_head_nod = state['head_nod_frames'] >= HEAD_NOD_CONSEC_FRAMES
 
         if effective_head_down:
-            state['score'] -= SCORE_DECREMENT_HEAD_DOWN * time_multiplier
+            state['score'] -= SCORE_DECREMENT_HEAD_DOWN * time_multiplier * frame_factor
 
         if effective_head_nod:
-            state['score'] -= SCORE_DECREMENT_HEAD_NOD * time_multiplier
+            state['score'] -= SCORE_DECREMENT_HEAD_NOD * time_multiplier * frame_factor
             # Penalización adicional cuando hay cabeceo y ojos cerrados simultáneamente
             if state['frames_eyes_closed'] >= EAR_CONSEC_FRAMES:
-                state['score'] -= SCORE_DECREMENT_NOD_EYES * time_multiplier
+                state['score'] -= SCORE_DECREMENT_NOD_EYES * time_multiplier * frame_factor
 
         # Si no hay señales de riesgo por una racha continua, acelerar recuperación a 100.
         is_safe_frame = (
@@ -635,7 +648,7 @@ def process_frame_for_conductor(conductor, frame):
         if is_safe_frame:
             state['normal_streak'] += 1
             if state['normal_streak'] >= NORMAL_STREAK_BOOST_FRAMES:
-                state['score'] += SCORE_INCREMENT_NORMAL_BOOST
+                state['score'] += SCORE_INCREMENT_NORMAL_BOOST * min(frame_factor, 1.8)
         else:
             state['normal_streak'] = 0
         
