@@ -98,8 +98,9 @@ FPS_SAVE = 5
 ANALYSIS_WIDTH = 320
 HAAR_RECHECK_INTERVAL = 3
 MJPEG_ENCODE_INTERVAL = 0.08
+NO_FACE_GRACE_FRAMES = 6
 EAR_THRESHOLD = 0.26
-EAR_CONSEC_FRAMES = 1
+EAR_CONSEC_FRAMES = 2
 MOUTH_OPEN_THRESHOLD = 0.22
 HEAD_DOWN_THRESHOLD = 0.10
 HEAD_NOD_THRESHOLD = 0.05
@@ -108,12 +109,12 @@ SCORE_MIN = 0
 SCORE_MAX = 100
 SCORE_DECREMENT_EYES_CLOSED = 6.0    # Ojos cerrados: caída rápida
 SCORE_DECREMENT_NO_EYES = 4.0        # Sin ojos detectados
-SCORE_INCREMENT_EYES_OPEN = 1.5      # Recuperación moderada
+SCORE_INCREMENT_EYES_OPEN = 2.0      # Recuperación moderada-alta
 SCORE_DECREMENT_YAWN = 3.0
 SCORE_DECREMENT_HEAD_DOWN = 8.0      # Cabeza inclinada: penalización fuerte
 SCORE_DECREMENT_HEAD_NOD = 6.0       # Cabeceo: muy agresivo
 SCORE_DECREMENT_NOD_EYES = 10.0      # Cabeceo + ojos cerrados: máxima penalización
-SCORE_DECREMENT_NO_FACE = 2.0        # Sin cara detectada
+SCORE_DECREMENT_NO_FACE = 1.0        # Sin cara detectada
 ALERT_THRESHOLD = 50
 ALERT_COOLDOWN = 3
 
@@ -569,8 +570,9 @@ def process_frame_for_conductor(conductor, frame):
         
         # Aplicar decrementos/incrementos
         if not tiene_cara:
-            # Sin cara detectada: penalizar levemente (evita que el score se quede fijo en 100)
-            state['score'] -= SCORE_DECREMENT_NO_FACE
+            # Evita castigar misses breves de detección cuando el conductor está normal.
+            if state['no_face_streak'] > NO_FACE_GRACE_FRAMES:
+                state['score'] -= SCORE_DECREMENT_NO_FACE
         elif state['frames_no_eyes'] > EAR_CONSEC_FRAMES:
             state['score'] -= SCORE_DECREMENT_NO_EYES * time_multiplier
         else:

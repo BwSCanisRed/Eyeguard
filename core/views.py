@@ -308,8 +308,8 @@ def conductor_send_frame(request):
         conductor.autenticado = True
         conductor.save()
         
-        # Si el score es crítico, guardar evento
-        if score >= 70:
+        # Si el score es crítico (valor bajo), guardar evento
+        if score < 40:
             from .models import CriticalEvent
             vehiculo = conductor.vehiculos.first()
             CriticalEvent.objects.create(
@@ -323,7 +323,7 @@ def conductor_send_frame(request):
             'success': True,
             'score': score,
             'face_detected': face_detected,
-            'status': 'normal' if score < 30 else 'warning' if score < 70 else 'critical'
+            'status': 'normal' if score >= 70 else 'warning' if score >= 40 else 'critical'
         })
         
     except Exception as e:
