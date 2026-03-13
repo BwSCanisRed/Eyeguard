@@ -85,23 +85,24 @@ CHIN_IDX = 152
 
 # Parámetros mejorados para detección de somnolencia
 FPS_SAVE = 5
-EAR_THRESHOLD = 0.21  # Más sensible: detecta ojos semi-cerrados
-EAR_CONSEC_FRAMES = 3  # Respuesta más rápida
-MOUTH_OPEN_THRESHOLD = 0.30  # Ajustado para bostezos más sutiles
-HEAD_DOWN_THRESHOLD = 0.15  # Más tolerante para cabeza inclinada
-HEAD_NOD_THRESHOLD = 0.08  # Detectar cabeceo/movimientos bruscos
+EAR_THRESHOLD = 0.25       # Umbral más alto: dispara desde ojos semi-cerrados
+EAR_CONSEC_FRAMES = 2      # Reacciona en 2 frames seguidos (antes 3)
+MOUTH_OPEN_THRESHOLD = 0.25  # Bostezos más sutiles detectados
+HEAD_DOWN_THRESHOLD = 0.12   # Cabeza inclinada detectada antes
+HEAD_NOD_THRESHOLD = 0.06    # Cabeceo detectado con menos varianza
 SCORE_START = 100
 SCORE_MIN = 0
 SCORE_MAX = 100
-# Ponderaciones ajustadas
-SCORE_DECREMENT_EYES_CLOSED = 1.8  # Penaliza más ojos cerrados
-SCORE_DECREMENT_NO_EYES = 1.2
-SCORE_INCREMENT_EYES_OPEN = 0.6  # Recuperación más rápida
-SCORE_DECREMENT_YAWN = 1.5  # Bostezo es señal fuerte
-SCORE_DECREMENT_HEAD_DOWN = 1.2
-SCORE_DECREMENT_HEAD_NOD = 0.8
-SCORE_DECREMENT_NOD_EYES = 3.5  # Penalización combinada fuerte: cabeceo + ojos cerrados
-ALERT_THRESHOLD = 30
+# Ponderaciones: bajada rápida, subida moderada para ver variación en vivo
+SCORE_DECREMENT_EYES_CLOSED = 3.0   # Baja 3 pts por frame con ojos cerrados
+SCORE_DECREMENT_NO_EYES = 2.0       # Baja 2 pts si no detecta ojos en cara
+SCORE_INCREMENT_EYES_OPEN = 1.2     # Sube 1.2 pts por frame con ojos abiertos
+SCORE_DECREMENT_YAWN = 2.5          # Bostezo baja más
+SCORE_DECREMENT_HEAD_DOWN = 2.0
+SCORE_DECREMENT_HEAD_NOD = 1.5
+SCORE_DECREMENT_NOD_EYES = 5.0      # Penalización combinada fuerte
+SCORE_DECREMENT_NO_FACE = 1.0       # Penalización leve si no hay cara (para evitar que se quede en 100)
+ALERT_THRESHOLD = 50               # Alerta desde 50 (antes 30) para que se vea antes
 ALERT_COOLDOWN = 3
 
 
@@ -543,7 +544,10 @@ def process_frame_for_conductor(conductor, frame):
             time_multiplier = 1.0
         
         # Aplicar decrementos/incrementos
-        if state['frames_no_eyes'] > EAR_CONSEC_FRAMES:
+        if not tiene_cara:
+            # Sin cara detectada: penalizar levemente (evita que el score se quede fijo en 100)
+            state['score'] -= SCORE_DECREMENT_NO_FACE
+        elif state['frames_no_eyes'] > EAR_CONSEC_FRAMES:
             state['score'] -= SCORE_DECREMENT_NO_EYES * time_multiplier
         else:
             if ojos_detectados:

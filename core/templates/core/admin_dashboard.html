@@ -652,11 +652,11 @@
                         span.textContent = s;
                         span.classList.remove('estado-normal','estado-precaucion','estado-peligro');
                         if (s >= 70) {
-                            span.classList.add('estado-normal');
-                        } else if (s >= 30) {
-                            span.classList.add('estado-precaucion');
+                            span.classList.add('estado-normal');   // verde
+                        } else if (s >= 40) {
+                            span.classList.add('estado-precaucion'); // naranja
                         } else {
-                            span.classList.add('estado-peligro');
+                            span.classList.add('estado-peligro');   // rojo
                         }
                     }).catch(err => {
                         // no hacer nada por ahora

@@ -482,17 +482,17 @@
                     if (data && typeof data.score === 'number') {
                         scoreValue.textContent = data.score;
                         
-                        // Cambiar color según el nivel de fatiga
-                        if (data.score < 30) {
+                        // Colores: verde >70, naranja 40-70, rojo <40
+                        if (data.score >= 70) {
                             scoreValue.style.color = 'var(--accent-green)';
-                        } else if (data.score < 70) {
+                        } else if (data.score >= 40) {
                             scoreValue.style.color = '#ff9f43';
                         } else {
                             scoreValue.style.color = '#e74c3c';
                         }
 
-                        // Mostrar alerta visual si score < 50
-                        if (data.score < 50) {
+                        // Mostrar alerta visual si score < 60
+                        if (data.score < 60) {
                             fatigueRiskAlert.style.display = 'block';
                         } else {
                             fatigueRiskAlert.style.display = 'none';
