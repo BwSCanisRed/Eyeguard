@@ -23,9 +23,17 @@ if mp is not None:
     except Exception:
         mp_face_mesh = None
 
+_face_cascade = None
+_eye_cascade = None
+_warned_no_facemesh = False
+
 
 def _create_face_mesh():
+    global _warned_no_facemesh
     if mp_face_mesh is None:
+        if not _warned_no_facemesh:
+            print("[WARN] MediaPipe FaceMesh no disponible; usando fallback Haar para deteccion basica.")
+            _warned_no_facemesh = True
         return None
     try:
         return mp_face_mesh.FaceMesh(
@@ -37,6 +45,38 @@ def _create_face_mesh():
     except Exception as e:
         print(f"[WARN] No se pudo crear FaceMesh: {e}")
         return None
+
+
+def _ensure_haar_models():
+    global _face_cascade, _eye_cascade
+    if _face_cascade is not None and _eye_cascade is not None:
+        return True
+    try:
+        face_xml = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+        eye_xml = cv2.data.haarcascades + 'haarcascade_eye.xml'
+        _face_cascade = cv2.CascadeClassifier(face_xml)
+        _eye_cascade = cv2.CascadeClassifier(eye_xml)
+        return not _face_cascade.empty() and not _eye_cascade.empty()
+    except Exception:
+        return False
+
+
+def _detect_face_eyes_haar(frame):
+    """Fallback liviano: retorna (tiene_cara, ojos_detectados)."""
+    if not _ensure_haar_models():
+        return False, False
+    try:
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        faces = _face_cascade.detectMultiScale(gray, scaleFactor=1.2, minNeighbors=5, minSize=(80, 80))
+        if len(faces) == 0:
+            return False, False
+        # Usar la cara mas grande para estabilidad.
+        x, y, w, h = max(faces, key=lambda f: f[2] * f[3])
+        roi = gray[y:y + h, x:x + w]
+        eyes = _eye_cascade.detectMultiScale(roi, scaleFactor=1.1, minNeighbors=6, minSize=(18, 18))
+        return True, len(eyes) >= 2
+    except Exception:
+        return False, False
 
 LEFT_EYE_IDX = [33, 160, 158, 133, 153, 144]
 RIGHT_EYE_IDX = [362, 385, 387, 263, 373, 380]
@@ -408,6 +448,7 @@ def process_frame_for_conductor(conductor, frame):
         head_down = False
         head_nod_detected = False
         ear = 0.0
+        ear_valid = False
         
         if results and results.multi_face_landmarks:
             face_landmarks = results.multi_face_landmarks[0]
@@ -422,6 +463,7 @@ def process_frame_for_conductor(conductor, frame):
                 ear_right = StreamState._calcular_EAR(right_eye_pts)
                 ear = (ear_left + ear_right) / 2.0
                 ojos_detectados = ear > 0.01
+                ear_valid = True
             except Exception:
                 ojos_detectados = False
             
@@ -469,13 +511,19 @@ def process_frame_for_conductor(conductor, frame):
         
         # Lógica de puntaje mejorada
         tiene_cara = bool(results and results.multi_face_landmarks)
+        if not tiene_cara:
+            tiene_cara, ojos_haar = _detect_face_eyes_haar(frame)
+            if tiene_cara:
+                ojos_detectados = ojos_haar
         
         if not ojos_detectados and tiene_cara:
             state['frames_no_eyes'] += 1
         else:
             state['frames_no_eyes'] = 0
         
-        if ear < EAR_THRESHOLD and tiene_cara:
+        if ear_valid and ear < EAR_THRESHOLD and tiene_cara:
+            state['frames_eyes_closed'] += 1
+        elif (not ear_valid) and tiene_cara and (not ojos_detectados):
             state['frames_eyes_closed'] += 1
         else:
             state['frames_eyes_closed'] = 0
