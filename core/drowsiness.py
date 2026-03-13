@@ -85,24 +85,24 @@ CHIN_IDX = 152
 
 # Parámetros mejorados para detección de somnolencia
 FPS_SAVE = 5
-EAR_THRESHOLD = 0.25       # Umbral más alto: dispara desde ojos semi-cerrados
-EAR_CONSEC_FRAMES = 2      # Reacciona en 2 frames seguidos (antes 3)
-MOUTH_OPEN_THRESHOLD = 0.25  # Bostezos más sutiles detectados
-HEAD_DOWN_THRESHOLD = 0.12   # Cabeza inclinada detectada antes
-HEAD_NOD_THRESHOLD = 0.06    # Cabeceo detectado con menos varianza
+EAR_THRESHOLD = 0.26       # Umbral alto: ojos semi-cerrados ya disparan
+EAR_CONSEC_FRAMES = 1      # Reacción inmediata: 1 solo frame basta
+MOUTH_OPEN_THRESHOLD = 0.22  # Bostezos muy sutiles
+HEAD_DOWN_THRESHOLD = 0.10
+HEAD_NOD_THRESHOLD = 0.05
 SCORE_START = 100
 SCORE_MIN = 0
 SCORE_MAX = 100
-# Ponderaciones: bajada rápida, subida moderada para ver variación en vivo
-SCORE_DECREMENT_EYES_CLOSED = 3.0   # Baja 3 pts por frame con ojos cerrados
-SCORE_DECREMENT_NO_EYES = 2.0       # Baja 2 pts si no detecta ojos en cara
-SCORE_INCREMENT_EYES_OPEN = 1.2     # Sube 1.2 pts por frame con ojos abiertos
-SCORE_DECREMENT_YAWN = 2.5          # Bostezo baja más
-SCORE_DECREMENT_HEAD_DOWN = 2.0
-SCORE_DECREMENT_HEAD_NOD = 1.5
-SCORE_DECREMENT_NOD_EYES = 5.0      # Penalización combinada fuerte
-SCORE_DECREMENT_NO_FACE = 1.0       # Penalización leve si no hay cara (para evitar que se quede en 100)
-ALERT_THRESHOLD = 50               # Alerta desde 50 (antes 30) para que se vea antes
+# Decrementos altos para cambio visible en < 1 segundo
+SCORE_DECREMENT_EYES_CLOSED = 5.0   # Baja 5 pts/frame con ojos cerrados
+SCORE_DECREMENT_NO_EYES = 3.5       # Baja 3.5 pts/frame sin detección de ojos
+SCORE_INCREMENT_EYES_OPEN = 1.5     # Sube 1.5 pts/frame con ojos abiertos
+SCORE_DECREMENT_YAWN = 3.0
+SCORE_DECREMENT_HEAD_DOWN = 3.0
+SCORE_DECREMENT_HEAD_NOD = 2.0
+SCORE_DECREMENT_NOD_EYES = 7.0      # Combinado: muy agresivo
+SCORE_DECREMENT_NO_FACE = 1.5       # Sin cara: evita score fijo en 100
+ALERT_THRESHOLD = 50
 ALERT_COOLDOWN = 3
 
 
