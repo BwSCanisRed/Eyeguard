@@ -99,8 +99,9 @@ ANALYSIS_WIDTH = 320
 HAAR_RECHECK_INTERVAL = 3
 MJPEG_ENCODE_INTERVAL = 0.08
 NO_FACE_GRACE_FRAMES = 6
-EAR_THRESHOLD = 0.26
+EAR_THRESHOLD = 0.24
 EAR_CONSEC_FRAMES = 2
+NO_EYES_CONSEC_FRAMES = 5
 MOUTH_OPEN_THRESHOLD = 0.22
 HEAD_DOWN_THRESHOLD = 0.10
 HEAD_NOD_THRESHOLD = 0.05
@@ -110,6 +111,7 @@ SCORE_MAX = 100
 SCORE_DECREMENT_EYES_CLOSED = 6.0    # Ojos cerrados: caída rápida
 SCORE_DECREMENT_NO_EYES = 4.0        # Sin ojos detectados
 SCORE_INCREMENT_EYES_OPEN = 2.0      # Recuperación moderada-alta
+SCORE_INCREMENT_BASELINE = 1.2       # Recuperación cuando hay cara estable
 SCORE_DECREMENT_YAWN = 3.0
 SCORE_DECREMENT_HEAD_DOWN = 8.0      # Cabeza inclinada: penalización fuerte
 SCORE_DECREMENT_HEAD_NOD = 6.0       # Cabeceo: muy agresivo
@@ -556,7 +558,7 @@ def process_frame_for_conductor(conductor, frame):
         
         # Detectar somnolencia sostenida
         is_drowsy = (state['frames_eyes_closed'] >= EAR_CONSEC_FRAMES or 
-                     state['frames_no_eyes'] > EAR_CONSEC_FRAMES)
+                 state['frames_no_eyes'] >= NO_EYES_CONSEC_FRAMES)
         
         if is_drowsy:
             if state['sustained_drowsy_start'] is None:
@@ -573,11 +575,15 @@ def process_frame_for_conductor(conductor, frame):
             # Evita castigar misses breves de detección cuando el conductor está normal.
             if state['no_face_streak'] > NO_FACE_GRACE_FRAMES:
                 state['score'] -= SCORE_DECREMENT_NO_FACE
-        elif state['frames_no_eyes'] > EAR_CONSEC_FRAMES:
+        elif state['frames_no_eyes'] >= NO_EYES_CONSEC_FRAMES:
             state['score'] -= SCORE_DECREMENT_NO_EYES * time_multiplier
         else:
             if ojos_detectados:
                 state['score'] += SCORE_INCREMENT_EYES_OPEN
+            elif (tiene_cara and not boca_detectada and not head_down and not head_nod_detected 
+                  and state['frames_eyes_closed'] == 0 and state['frames_no_eyes'] < NO_EYES_CONSEC_FRAMES):
+                # Recuperación suave aunque no haya ojos válidos por ruido temporal.
+                state['score'] += SCORE_INCREMENT_BASELINE
         
         if state['frames_eyes_closed'] >= EAR_CONSEC_FRAMES:
             state['score'] -= SCORE_DECREMENT_EYES_CLOSED * time_multiplier
@@ -621,7 +627,7 @@ def process_frame_for_conductor(conductor, frame):
         except Exception as e:
             print(f"[ERROR] No se pudo guardar frame para conductor {conductor_id}: {e}")
 
-        return max(SCORE_MIN, min(SCORE_MAX, int(state['score']))), tiene_cara
+        return max(SCORE_MIN, min(SCORE_MAX, int(round(state['score'])))), tiene_cara
 
 
 def stop_stream_for(conductor):
