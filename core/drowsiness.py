@@ -576,44 +576,6 @@ def process_frame_for_conductor(conductor, frame):
         else:
             state['frames_eyes_closed'] = 0
         
-        # Detectar somnolencia sostenida
-        is_drowsy = (state['frames_eyes_closed'] >= EAR_CONSEC_FRAMES or 
-                 state['frames_no_eyes'] >= NO_EYES_CONSEC_FRAMES)
-        
-        if is_drowsy:
-            if state['sustained_drowsy_start'] is None:
-                state['sustained_drowsy_start'] = time.time()
-            drowsy_duration = time.time() - state['sustained_drowsy_start']
-            # Penalización creciente con el tiempo: alcanza 3x en ~4 segundos
-            time_multiplier = 1.0 + min(drowsy_duration / 2.0, 3.0)  # Max 4x después de 6s
-        else:
-            state['sustained_drowsy_start'] = None
-            time_multiplier = 1.0
-        
-        # Aplicar decrementos/incrementos
-        if not tiene_cara:
-            # Evita castigar misses breves de detección cuando el conductor está normal.
-            if state['no_face_streak'] > NO_FACE_GRACE_FRAMES:
-                state['score'] -= SCORE_DECREMENT_NO_FACE * frame_factor
-        elif state['frames_no_eyes'] >= NO_EYES_CONSEC_FRAMES:
-            state['score'] -= SCORE_DECREMENT_NO_EYES * time_multiplier * frame_factor
-        else:
-            if ojos_detectados:
-                state['score'] += SCORE_INCREMENT_EYES_OPEN * min(frame_factor, 1.8)
-            elif (tiene_cara and not boca_detectada and not head_down and not head_nod_detected 
-                  and state['frames_eyes_closed'] == 0 and state['frames_no_eyes'] < NO_EYES_CONSEC_FRAMES):
-                # Recuperación suave aunque no haya ojos válidos por ruido temporal.
-                state['score'] += SCORE_INCREMENT_BASELINE * min(frame_factor, 1.8)
-        
-        if state['frames_eyes_closed'] >= EAR_CONSEC_FRAMES:
-            eyes_penalty = SCORE_DECREMENT_EYES_CLOSED * time_multiplier * frame_factor
-            if state['frames_eyes_closed'] >= 4:
-                eyes_penalty += SCORE_DECREMENT_PROLONGED_EYES * time_multiplier * frame_factor
-            state['score'] -= eyes_penalty
-        
-        if boca_detectada:
-            state['score'] -= SCORE_DECREMENT_YAWN * frame_factor
-        
         if head_down:
             state['head_down_frames'] += 1
         else:
@@ -627,30 +589,58 @@ def process_frame_for_conductor(conductor, frame):
         effective_head_down = state['head_down_frames'] >= HEAD_DOWN_CONSEC_FRAMES
         effective_head_nod = state['head_nod_frames'] >= HEAD_NOD_CONSEC_FRAMES
 
+        # Cálculo continuo de severidad según signos detectados.
+        risk_score = 0.0
+        if (not tiene_cara) and state['no_face_streak'] > NO_FACE_GRACE_FRAMES:
+            risk_score += 0.7
+
+        if state['frames_no_eyes'] >= NO_EYES_CONSEC_FRAMES:
+            excess_no_eyes = state['frames_no_eyes'] - NO_EYES_CONSEC_FRAMES
+            risk_score += 1.0 + min(1.5, excess_no_eyes * 0.15)
+
+        if state['frames_eyes_closed'] >= EAR_CONSEC_FRAMES:
+            excess_closed = state['frames_eyes_closed'] - EAR_CONSEC_FRAMES
+            risk_score += 1.2 + min(2.0, excess_closed * 0.35)
+            if state['frames_eyes_closed'] >= 4:
+                risk_score += 0.8
+
+        if boca_detectada:
+            risk_score += 0.5
         if effective_head_down:
-            state['score'] -= SCORE_DECREMENT_HEAD_DOWN * time_multiplier * frame_factor
-
+            risk_score += 0.35
         if effective_head_nod:
-            state['score'] -= SCORE_DECREMENT_HEAD_NOD * time_multiplier * frame_factor
-            # Penalización adicional cuando hay cabeceo y ojos cerrados simultáneamente
+            risk_score += 1.4
             if state['frames_eyes_closed'] >= EAR_CONSEC_FRAMES:
-                state['score'] -= SCORE_DECREMENT_NOD_EYES * time_multiplier * frame_factor
+                risk_score += 1.2
 
-        # Si no hay señales de riesgo por una racha continua, acelerar recuperación a 100.
-        is_safe_frame = (
-            tiene_cara
-            and state['frames_no_eyes'] < NO_EYES_CONSEC_FRAMES
-            and state['frames_eyes_closed'] == 0
-            and not boca_detectada
-            and not effective_head_down
-            and not effective_head_nod
-        )
-        if is_safe_frame:
-            state['normal_streak'] += 1
-            if state['normal_streak'] >= NORMAL_STREAK_BOOST_FRAMES:
-                state['score'] += SCORE_INCREMENT_NORMAL_BOOST * min(frame_factor, 1.8)
+        is_drowsy = risk_score >= 1.0
+        if is_drowsy:
+            if state['sustained_drowsy_start'] is None:
+                state['sustained_drowsy_start'] = time.time()
+            drowsy_duration = time.time() - state['sustained_drowsy_start']
+            # Escala más agresiva mientras persisten signos de riesgo.
+            time_multiplier = 1.0 + min(drowsy_duration / 1.5, 4.0)
         else:
+            state['sustained_drowsy_start'] = None
+            time_multiplier = 1.0
+
+        if risk_score > 0.0:
+            # Baja en función de severidad y del tiempo real entre frames.
+            drop_per_sec = (7.0 + 9.0 * risk_score) * time_multiplier
+            state['score'] -= drop_per_sec * dt
             state['normal_streak'] = 0
+        else:
+            # Recuperación progresiva para evitar estancamiento en dos valores.
+            state['normal_streak'] += 1
+            recover_per_sec = 12.0
+            if tiene_cara:
+                recover_per_sec += 2.0
+            if ojos_detectados:
+                recover_per_sec += 3.0
+            if state['normal_streak'] >= NORMAL_STREAK_BOOST_FRAMES:
+                recover_per_sec += 10.0
+            state['score'] += recover_per_sec * dt * min(frame_factor, 1.8)
+
         
         state['score'] = max(SCORE_MIN, min(SCORE_MAX, state['score']))
         
