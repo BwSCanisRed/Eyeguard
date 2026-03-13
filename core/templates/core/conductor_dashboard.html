@@ -307,6 +307,30 @@
                     ⚠️ {% trans "ALERTA DE SOMNOLENCIA" %}
                     <span>{% trans "Índice por debajo de 50. Por favor mantente alerta." %}</span>
                 </div>
+                <div id="noFaceAlert" style="
+                    display:none;
+                    position:fixed;
+                    top:50%;
+                    left:50%;
+                    transform:translate(-50%,-50%);
+                    background:rgba(255,165,0,0.18);
+                    border:2px solid #ff9f43;
+                    padding:22px 28px;
+                    border-radius:16px;
+                    color:#fff;
+                    font-weight:700;
+                    font-size:1.2rem;
+                    text-align:center;
+                    backdrop-filter:blur(8px);
+                    box-shadow:0 12px 36px -8px rgba(255,159,67,0.6);
+                    z-index:2100;
+                    animation:pulse 1.1s infinite;
+                    max-width:90vw;
+                    min-width:320px;
+                ">
+                    👁️ SIN ROSTRO DETECTADO
+                    <span style="display:block;font-size:0.95rem;font-weight:500;margin-top:6px;color:#ffe0b2;">Por favor mantén tu rostro visible ante la cámara</span>
+                </div>
             </div>
         </div>
     </div>
@@ -320,6 +344,7 @@
         const fatigueScoreDiv = document.getElementById('fatigueScore');
         const scoreValue = document.getElementById('scoreValue');
         const fatigueRiskAlert = document.getElementById('fatigueRiskAlert');
+        const noFaceAlert = document.getElementById('noFaceAlert');
         const locationInfo = document.getElementById('locationInfo');
         const locationText = document.getElementById('locationText');
         
@@ -330,6 +355,66 @@
         let targetInterval = 100;
         let frameTimeout = null;
         let userLocation = null;
+
+        // Web Audio context para alarmas sonoras
+        let audioCtx = null;
+        let noFaceAlarmNode = null;
+        let noFaceFrames = 0;   // frames consecutivos sin cara
+        const NO_FACE_FRAMES_ALARM = 8; // ~0.8s sin cara antes de alarmar
+
+        function getAudioCtx() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            return audioCtx;
+        }
+
+        function playBeep(freq, duration, type='sine', vol=0.4) {
+            try {
+                const ctx2 = getAudioCtx();
+                const osc = ctx2.createOscillator();
+                const gain = ctx2.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, ctx2.currentTime);
+                gain.gain.setValueAtTime(vol, ctx2.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx2.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(ctx2.destination);
+                osc.start(ctx2.currentTime);
+                osc.stop(ctx2.currentTime + duration);
+            } catch(e) {}
+        }
+
+        let noFaceBeepTimer = null;
+        function startNoFaceAlarm() {
+            if (noFaceBeepTimer) return;
+            noFaceAlert.style.display = 'block';
+            function beepLoop() {
+                if (!isStreaming || noFaceFrames < NO_FACE_FRAMES_ALARM) return;
+                playBeep(880, 0.25, 'square', 0.3);
+                noFaceBeepTimer = setTimeout(beepLoop, 800);
+            }
+            beepLoop();
+        }
+
+        function stopNoFaceAlarm() {
+            noFaceAlert.style.display = 'none';
+            if (noFaceBeepTimer) { clearTimeout(noFaceBeepTimer); noFaceBeepTimer = null; }
+        }
+
+        let fatigueBeepTimer = null;
+        function startFatigueAlarm() {
+            if (fatigueBeepTimer) return;
+            function beepLoop() {
+                if (!isStreaming) return;
+                playBeep(440, 0.3, 'sawtooth', 0.35);
+                setTimeout(() => playBeep(330, 0.3, 'sawtooth', 0.35), 350);
+                fatigueBeepTimer = setTimeout(beepLoop, 1500);
+            }
+            beepLoop();
+        }
+
+        function stopFatigueAlarm() {
+            if (fatigueBeepTimer) { clearTimeout(fatigueBeepTimer); fatigueBeepTimer = null; }
+        }
 
         toggleBtn.addEventListener('click', async () => {
             if (!isStreaming) {
@@ -415,11 +500,15 @@
             
             isStreaming = false;
             uploading = false;
+            noFaceFrames = 0;
+            stopNoFaceAlarm();
+            stopFatigueAlarm();
             toggleBtn.textContent = '{% trans "Activar Cámara" %}';
             toggleBtn.style.background = 'linear-gradient(90deg, var(--accent-green), var(--accent-magenta))';
             statusDiv.textContent = '{% trans "Cámara desactivada" %}';
             statusDiv.style.color = 'var(--muted)';
             fatigueScoreDiv.style.display = 'none';
+            fatigueRiskAlert.style.display = 'none';
             locationInfo.style.display = 'none';
             userLocation = null;
 
@@ -481,8 +570,8 @@
                     const data = await response.json();
                     if (data && typeof data.score === 'number') {
                         scoreValue.textContent = data.score;
-                        
-                        // Colores: verde >70, naranja 40-70, rojo <40
+
+                        // Colores: verde >=70, naranja 40-70, rojo <40
                         if (data.score >= 70) {
                             scoreValue.style.color = 'var(--accent-green)';
                         } else if (data.score >= 40) {
@@ -491,11 +580,22 @@
                             scoreValue.style.color = '#e74c3c';
                         }
 
-                        // Mostrar alerta visual si score < 60
+                        // Alerta de fatiga: visual + sonora
                         if (data.score < 60) {
                             fatigueRiskAlert.style.display = 'block';
+                            startFatigueAlarm();
                         } else {
                             fatigueRiskAlert.style.display = 'none';
+                            stopFatigueAlarm();
+                        }
+
+                        // Alarma de sin-cara
+                        if (data.face_detected === false) {
+                            noFaceFrames++;
+                            if (noFaceFrames >= NO_FACE_FRAMES_ALARM) startNoFaceAlarm();
+                        } else {
+                            noFaceFrames = 0;
+                            stopNoFaceAlarm();
                         }
                     }
                 } catch (error) {

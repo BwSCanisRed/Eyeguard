@@ -301,7 +301,7 @@ def conductor_send_frame(request):
                 pass
 
         # Procesar con el detector de somnolencia
-        score = drowsiness.process_frame_for_conductor(conductor, frame)
+        score, face_detected = drowsiness.process_frame_for_conductor(conductor, frame)
         
         # Actualizar el estado del conductor
         conductor.estado_fatiga = score / 100.0  # Convertir a decimal
@@ -322,6 +322,7 @@ def conductor_send_frame(request):
         return JsonResponse({
             'success': True,
             'score': score,
+            'face_detected': face_detected,
             'status': 'normal' if score < 30 else 'warning' if score < 70 else 'critical'
         })
         

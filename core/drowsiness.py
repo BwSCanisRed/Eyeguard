@@ -85,23 +85,22 @@ CHIN_IDX = 152
 
 # Parámetros mejorados para detección de somnolencia
 FPS_SAVE = 5
-EAR_THRESHOLD = 0.26       # Umbral alto: ojos semi-cerrados ya disparan
-EAR_CONSEC_FRAMES = 1      # Reacción inmediata: 1 solo frame basta
-MOUTH_OPEN_THRESHOLD = 0.22  # Bostezos muy sutiles
+EAR_THRESHOLD = 0.26
+EAR_CONSEC_FRAMES = 1
+MOUTH_OPEN_THRESHOLD = 0.22
 HEAD_DOWN_THRESHOLD = 0.10
 HEAD_NOD_THRESHOLD = 0.05
 SCORE_START = 100
 SCORE_MIN = 0
 SCORE_MAX = 100
-# Decrementos altos para cambio visible en < 1 segundo
-SCORE_DECREMENT_EYES_CLOSED = 5.0   # Baja 5 pts/frame con ojos cerrados
-SCORE_DECREMENT_NO_EYES = 3.5       # Baja 3.5 pts/frame sin detección de ojos
-SCORE_INCREMENT_EYES_OPEN = 1.5     # Sube 1.5 pts/frame con ojos abiertos
+SCORE_DECREMENT_EYES_CLOSED = 6.0    # Ojos cerrados: caída rápida
+SCORE_DECREMENT_NO_EYES = 4.0        # Sin ojos detectados
+SCORE_INCREMENT_EYES_OPEN = 1.5      # Recuperación moderada
 SCORE_DECREMENT_YAWN = 3.0
-SCORE_DECREMENT_HEAD_DOWN = 3.0
-SCORE_DECREMENT_HEAD_NOD = 2.0
-SCORE_DECREMENT_NOD_EYES = 7.0      # Combinado: muy agresivo
-SCORE_DECREMENT_NO_FACE = 1.5       # Sin cara: evita score fijo en 100
+SCORE_DECREMENT_HEAD_DOWN = 8.0      # Cabeza inclinada: penalización fuerte
+SCORE_DECREMENT_HEAD_NOD = 6.0       # Cabeceo: muy agresivo
+SCORE_DECREMENT_NOD_EYES = 10.0      # Cabeceo + ojos cerrados: máxima penalización
+SCORE_DECREMENT_NO_FACE = 2.0        # Sin cara detectada
 ALERT_THRESHOLD = 50
 ALERT_COOLDOWN = 3
 
@@ -537,8 +536,8 @@ def process_frame_for_conductor(conductor, frame):
             if state['sustained_drowsy_start'] is None:
                 state['sustained_drowsy_start'] = time.time()
             drowsy_duration = time.time() - state['sustained_drowsy_start']
-            # Penalización creciente con el tiempo (multiplicador de duración)
-            time_multiplier = 1.0 + min(drowsy_duration / 5.0, 2.0)  # Max 3x después de 10s
+            # Penalización creciente con el tiempo: alcanza 3x en ~4 segundos
+            time_multiplier = 1.0 + min(drowsy_duration / 2.0, 3.0)  # Max 4x después de 6s
         else:
             state['sustained_drowsy_start'] = None
             time_multiplier = 1.0
@@ -563,7 +562,7 @@ def process_frame_for_conductor(conductor, frame):
             state['score'] -= SCORE_DECREMENT_HEAD_DOWN * time_multiplier
         
         if head_nod_detected:
-            state['score'] -= SCORE_DECREMENT_HEAD_NOD
+            state['score'] -= SCORE_DECREMENT_HEAD_NOD * time_multiplier
             # Penalización adicional cuando hay cabeceo y ojos cerrados simultáneamente
             if state['frames_eyes_closed'] >= EAR_CONSEC_FRAMES:
                 state['score'] -= SCORE_DECREMENT_NOD_EYES * time_multiplier
@@ -592,7 +591,7 @@ def process_frame_for_conductor(conductor, frame):
         except Exception as e:
             print(f"[ERROR] No se pudo guardar frame para conductor {conductor_id}: {e}")
 
-        return max(SCORE_MIN, min(SCORE_MAX, int(state['score'])))
+        return max(SCORE_MIN, min(SCORE_MAX, int(state['score']))), tiene_cara
 
 
 def stop_stream_for(conductor):
