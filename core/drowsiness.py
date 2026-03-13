@@ -3,6 +3,7 @@ import numpy as np
 import threading
 import time
 import math
+from collections import deque
 try:
     import mediapipe as mp
 except Exception:
@@ -61,12 +62,13 @@ def _ensure_haar_models():
         return False
 
 
-def _detect_face_eyes_haar(frame):
+def _detect_face_eyes_haar(frame, gray=None):
     """Fallback liviano: retorna (tiene_cara, ojos_detectados)."""
     if not _ensure_haar_models():
         return False, False
     try:
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        if gray is None:
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         faces = _face_cascade.detectMultiScale(gray, scaleFactor=1.2, minNeighbors=5, minSize=(80, 80))
         if len(faces) == 0:
             return False, False
@@ -78,6 +80,14 @@ def _detect_face_eyes_haar(frame):
     except Exception:
         return False, False
 
+
+def _resize_for_analysis(frame):
+    h, w = frame.shape[:2]
+    if w <= ANALYSIS_WIDTH:
+        return frame
+    target_h = max(1, int(h * (ANALYSIS_WIDTH / float(w))))
+    return cv2.resize(frame, (ANALYSIS_WIDTH, target_h), interpolation=cv2.INTER_AREA)
+
 LEFT_EYE_IDX = [33, 160, 158, 133, 153, 144]
 RIGHT_EYE_IDX = [362, 385, 387, 263, 373, 380]
 NOSE_IDX = 1
@@ -85,6 +95,9 @@ CHIN_IDX = 152
 
 # Parámetros mejorados para detección de somnolencia
 FPS_SAVE = 5
+ANALYSIS_WIDTH = 320
+HAAR_RECHECK_INTERVAL = 3
+MJPEG_ENCODE_INTERVAL = 0.08
 EAR_THRESHOLD = 0.26
 EAR_CONSEC_FRAMES = 1
 MOUTH_OPEN_THRESHOLD = 0.22
@@ -397,11 +410,14 @@ def process_frame_for_conductor(conductor, frame):
             'frames_eyes_closed': 0,
             'last_alert': 0,
             'last_jpeg': None,
+            'last_jpeg_encode': 0.0,
             'last_update': time.time(),
             'lock': threading.Lock(),
             'face_mesh': _create_face_mesh(),
-            'chin_positions': [],  # Para detectar cabeceo
+            'chin_positions': deque(maxlen=8),  # Para detectar cabeceo
             'sustained_drowsy_start': None,  # Marca cuando empieza somnolencia sostenida
+            'no_face_streak': 0,
+            'last_face_detected': True,
             'location': None  # {'lat': float, 'lon': float, 'timestamp': float}
         }
     
@@ -417,17 +433,21 @@ def process_frame_for_conductor(conductor, frame):
     state.setdefault('frames_eyes_closed', 0)
     state.setdefault('last_alert', 0)
     state.setdefault('last_jpeg', None)
+    state.setdefault('last_jpeg_encode', 0.0)
     state.setdefault('last_update', time.time())
-    state.setdefault('chin_positions', [])
+    if not isinstance(state.get('chin_positions'), deque):
+        state['chin_positions'] = deque(state.get('chin_positions', []), maxlen=8)
     state.setdefault('sustained_drowsy_start', None)
+    state.setdefault('no_face_streak', 0)
+    state.setdefault('last_face_detected', True)
     state.setdefault('score', SCORE_START)
     
     # Usar lock para evitar procesamiento concurrente
     with state['lock']:
         face_mesh = state['face_mesh']
-        
-        h, w = frame.shape[:2]
-        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        analysis_frame = _resize_for_analysis(frame)
+        h, w = analysis_frame.shape[:2]
+        rgb = cv2.cvtColor(analysis_frame, cv2.COLOR_BGR2RGB)
         
         # Manejar errores de timestamp de MediaPipe
         try:
@@ -497,24 +517,29 @@ def process_frame_for_conductor(conductor, frame):
                 
                 # Detectar cabeceo (movimientos bruscos del mentón)
                 state['chin_positions'].append(chin_y)
-                if len(state['chin_positions']) > 10:  # Mantener ventana de 10 frames
-                    state['chin_positions'].pop(0)
-                    if len(state['chin_positions']) >= 5:
-                        chin_variance = max(state['chin_positions']) - min(state['chin_positions'])
-                        # Normalizar por altura de cara
-                        if bottom_y - top_y > 0:
-                            chin_variance_norm = chin_variance / (bottom_y - top_y)
-                            if chin_variance_norm > HEAD_NOD_THRESHOLD:
-                                head_nod_detected = True
+                if len(state['chin_positions']) >= 5:
+                    chin_variance = max(state['chin_positions']) - min(state['chin_positions'])
+                    if bottom_y - top_y > 0:
+                        chin_variance_norm = chin_variance / (bottom_y - top_y)
+                        if chin_variance_norm > HEAD_NOD_THRESHOLD:
+                            head_nod_detected = True
             except Exception:
                 head_down = False
         
         # Lógica de puntaje mejorada
         tiene_cara = bool(results and results.multi_face_landmarks)
         if not tiene_cara:
-            tiene_cara, ojos_haar = _detect_face_eyes_haar(frame)
+            state['no_face_streak'] += 1
+            if state['no_face_streak'] == 1 or state['no_face_streak'] % HAAR_RECHECK_INTERVAL == 0:
+                gray = cv2.cvtColor(analysis_frame, cv2.COLOR_BGR2GRAY)
+                tiene_cara, ojos_haar = _detect_face_eyes_haar(analysis_frame, gray=gray)
+            else:
+                ojos_haar = False
             if tiene_cara:
                 ojos_detectados = ojos_haar
+        else:
+            state['no_face_streak'] = 0
+        state['last_face_detected'] = tiene_cara
         
         if not ojos_detectados and tiene_cara:
             state['frames_no_eyes'] += 1
@@ -580,9 +605,12 @@ def process_frame_for_conductor(conductor, frame):
         
         # Guardar último frame como JPEG para el stream MJPEG del admin
         try:
-            _, jpeg = cv2.imencode('.jpg', frame)
-            state['last_jpeg'] = jpeg.tobytes()
-            state['last_update'] = time.time()
+            now = time.time()
+            if state['last_jpeg'] is None or (now - state['last_jpeg_encode']) >= MJPEG_ENCODE_INTERVAL:
+                _, jpeg = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 72])
+                state['last_jpeg'] = jpeg.tobytes()
+                state['last_jpeg_encode'] = now
+            state['last_update'] = now
             # Log solo en el primer frame para confirmar
             if 'frame_count' not in state:
                 state['frame_count'] = 0
