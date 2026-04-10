@@ -340,6 +340,32 @@
             font-weight: 600;
             font-size: 0.9rem;
         }
+        .mobile-support {
+            margin-top: 20px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 14px;
+        }
+        .mobile-support h3 {
+            margin: 0 0 10px 0;
+            color: #9dd7ff;
+        }
+        .mobile-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        .mobile-table th,
+        .mobile-table td {
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            padding: 8px;
+            text-align: left;
+        }
+        .mobile-table th {
+            color: #b6c0d1;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -605,6 +631,27 @@
                     <p>No hay conductores registrados.</p>
                     {% endfor %}
                 </div>
+
+                <div class="mobile-support">
+                    <h3>Soporte de datos recibidos desde app móvil</h3>
+                    <table class="mobile-table">
+                        <thead>
+                            <tr>
+                                <th>Documento</th>
+                                <th>Fecha Expedición</th>
+                                <th>Nombre</th>
+                                <th>Placa</th>
+                                <th>Indice</th>
+                                <th>Estado</th>
+                                <th>Ubicación</th>
+                                <th>Última sincronización</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mobile-sync-table-body">
+                            <tr><td colspan="8" style="color:#9aa4b2">Sin datos aún</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -724,6 +771,42 @@
                 });
         }
 
+        function actualizarEstadosMoviles() {
+            return fetch('/api/mobile/states/')
+                .then(resp => resp.json())
+                .then(data => {
+                    const states = data.states || [];
+                    const tbody = document.getElementById('mobile-sync-table-body');
+                    if (!tbody) return;
+
+                    if (!states.length) {
+                        tbody.innerHTML = '<tr><td colspan="8" style="color:#9aa4b2">Sin datos aún</td></tr>';
+                        return;
+                    }
+
+                    tbody.innerHTML = states.map(item => {
+                        const indice = Number(item.fatigue_index || 0);
+                        const loc = (item.latitude !== null && item.longitude !== null)
+                            ? `${Number(item.latitude).toFixed(6)}, ${Number(item.longitude).toFixed(6)}`
+                            : 'Sin ubicación';
+                        const when = item.last_seen_at ? new Date(item.last_seen_at).toLocaleString() : '-';
+
+                        return `<tr>
+                            <td>${item.documento || '-'}</td>
+                            <td>${item.document_issue_date || '-'}</td>
+                            <td>${item.nombre_conductor || '-'}</td>
+                            <td>${item.placa || '-'}</td>
+                            <td>${indice}</td>
+                            <td>${item.estado || '-'}</td>
+                            <td>${loc}</td>
+                            <td>${when}</td>
+                        </tr>`;
+                    }).join('');
+                }).catch(() => {
+                    // silencioso
+                });
+        }
+
         // iniciar polling cada 2s cuando se abra la pestaña de monitoreo
         setInterval(function(){
             // solo actualizar si la pestaña monitoreo está visible
@@ -732,6 +815,7 @@
                 actualizarScores();
                 actualizarEstadoStreaming();
                 actualizarUbicaciones();
+                actualizarEstadosMoviles();
             }
         }, 2000);
 
@@ -747,7 +831,8 @@
             Promise.all([
                 actualizarScores(),
                 actualizarEstadoStreaming(),
-                actualizarUbicaciones()
+                actualizarUbicaciones(),
+                actualizarEstadosMoviles()
             ]).finally(() => {
                 setTimeout(() => {
                     btn.disabled = false;
@@ -756,6 +841,9 @@
                 }, 500);
             });
         }
+
+        // Cargar tabla de soporte al abrir.
+        actualizarEstadosMoviles();
     </script>
 </body>
 </html>

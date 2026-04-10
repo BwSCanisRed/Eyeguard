@@ -38,7 +38,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils.crypto import get_random_string
-from .models import Usuario, Conductor, Vehiculo
+from .models import Usuario, Conductor, Vehiculo, MobileTelemetrySnapshot
 from .forms import ConductorForm, VehiculoForm, EditConductorForm
 from .decorators import check_session_timeout
 from django.http import StreamingHttpResponse, JsonResponse
@@ -48,6 +48,172 @@ from django.utils import timezone
 from django.http import HttpResponse
 from .models import CriticalEvent
 from django.contrib.auth import logout as auth_logout
+from django.views.decorators.csrf import csrf_exempt
+import json
+
+
+def api_health(request):
+    return JsonResponse({'ok': True, 'service': 'eyeguard'})
+
+
+@csrf_exempt
+def mobile_login(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    try:
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+    except json.JSONDecodeError:
+        payload = {}
+
+    username = (payload.get('username') or '').strip()
+    password = payload.get('password') or ''
+    role = payload.get('role') or 'conductor'
+
+    if not username or not password:
+        return JsonResponse({'error': 'username and password are required'}, status=400)
+
+    user = authenticate(request, username=username, password=password)
+    if user is None:
+        return JsonResponse({'error': 'Invalid credentials'}, status=401)
+
+    if user.rol != role:
+        return JsonResponse({'error': 'Role not allowed for this user'}, status=403)
+
+    login(request, user)
+    return JsonResponse({
+        'success': True,
+        'user': {
+            'id': str(user.id),
+            'username': user.username,
+            'role': user.rol,
+        }
+    })
+
+
+@csrf_exempt
+@login_required
+def mobile_logout(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    auth_logout(request)
+    return JsonResponse({'success': True})
+
+
+@csrf_exempt
+def mobile_sync_status(request):
+    """Recibe telemetría offline-first desde la app móvil local.
+
+    Espera JSON con documento, fatigue_index, estado y ubicación opcional.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    try:
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+    except json.JSONDecodeError:
+        payload = {}
+
+    documento = str(payload.get('documentNumber') or payload.get('documento') or '').strip()
+    if not documento:
+        return JsonResponse({'error': 'documentNumber is required'}, status=400)
+
+    try:
+        fatigue_index = int(payload.get('fatigueIndex', 100))
+    except (TypeError, ValueError):
+        fatigue_index = 100
+    fatigue_index = max(0, min(100, fatigue_index))
+
+    estado = str(payload.get('status') or 'normal').strip() or 'normal'
+    face_detected = bool(payload.get('faceDetected', True))
+    nombre = str(payload.get('fullName') or '').strip()
+    document_issue_date = str(payload.get('documentIssueDate') or '').strip()
+    placa = str(payload.get('vehiclePlate') or '').strip().upper()
+
+    lat_raw = payload.get('latitude')
+    lon_raw = payload.get('longitude')
+    latitude = None
+    longitude = None
+    try:
+        if lat_raw is not None and lon_raw is not None:
+            latitude = float(lat_raw)
+            longitude = float(lon_raw)
+    except (TypeError, ValueError):
+        latitude = None
+        longitude = None
+
+    conductor = Conductor.objects.filter(documento=documento).first()
+
+    snapshot, _ = MobileTelemetrySnapshot.objects.update_or_create(
+        documento=documento,
+        defaults={
+            'conductor': conductor,
+            'nombre_conductor': nombre,
+            'document_issue_date': document_issue_date,
+            'placa': placa,
+            'fatigue_index': fatigue_index,
+            'estado': estado,
+            'face_detected': face_detected,
+            'latitude': latitude,
+            'longitude': longitude,
+            'source': 'mobile_local',
+            'last_seen_at': timezone.now(),
+        },
+    )
+
+    if conductor is not None:
+        conductor.estado_fatiga = fatigue_index / 100.0
+        conductor.autenticado = True
+        conductor.save(update_fields=['estado_fatiga', 'autenticado'])
+
+        drowsiness.update_mobile_state_for(
+            conductor,
+            score=fatigue_index,
+            status=estado,
+            face_detected=face_detected,
+            lat=latitude,
+            lon=longitude,
+        )
+
+        if fatigue_index < 40:
+            vehiculo = conductor.vehiculos.first()
+            CriticalEvent.objects.create(
+                conductor=conductor,
+                vehiculo=vehiculo,
+                score=fatigue_index,
+                note='Alta fatiga reportada desde app móvil local',
+            )
+
+    return JsonResponse({
+        'success': True,
+        'linked_conductor': conductor is not None,
+        'documento': snapshot.documento,
+        'fatigue_index': snapshot.fatigue_index,
+        'last_seen_at': snapshot.last_seen_at.isoformat(),
+    })
+
+
+@login_required
+def mobile_latest_states(request):
+    """Lista el último estado móvil recibido para mostrar soporte en dashboard."""
+    snapshots = MobileTelemetrySnapshot.objects.select_related('conductor').all()[:100]
+    data = []
+    for item in snapshots:
+        data.append({
+            'documento': item.documento,
+            'conductor_id': str(item.conductor.id) if item.conductor else None,
+            'nombre_conductor': item.nombre_conductor,
+            'document_issue_date': item.document_issue_date,
+            'placa': item.placa,
+            'fatigue_index': item.fatigue_index,
+            'estado': item.estado,
+            'face_detected': item.face_detected,
+            'latitude': item.latitude,
+            'longitude': item.longitude,
+            'last_seen_at': item.last_seen_at.isoformat(),
+        })
+    return JsonResponse({'states': data})
 
 def login_view(request):
     if request.method == 'POST':

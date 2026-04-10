@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.core.validators import RegexValidator
+from django.utils import timezone
 import uuid
 
 class Usuario(AbstractUser):
@@ -94,3 +95,35 @@ class CriticalEvent(models.Model):
 
     def __str__(self):
         return f"CriticalEvent {self.id} - {self.score} @ {self.timestamp}"
+
+
+class MobileTelemetrySnapshot(models.Model):
+    """Último estado recibido desde la app móvil local para cada documento."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    conductor = models.ForeignKey(
+        Conductor,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='mobile_snapshots',
+    )
+    documento = models.CharField(max_length=50, unique=True, db_index=True)
+    document_issue_date = models.CharField(max_length=20, blank=True)
+    nombre_conductor = models.CharField(max_length=150, blank=True)
+    placa = models.CharField(max_length=10, blank=True)
+    fatigue_index = models.IntegerField(default=100)
+    estado = models.CharField(max_length=40, default='normal')
+    face_detected = models.BooleanField(default=True)
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
+    source = models.CharField(max_length=40, default='mobile_local')
+    last_seen_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-last_seen_at']
+
+    def __str__(self):
+        return f"Snapshot {self.documento} - {self.fatigue_index}"

@@ -20,5 +20,15 @@ urlpatterns = [
     path('conductor/stop_stream/', views.conductor_stop_stream, name='conductor_stop_stream'),
     path('api/conductores_activos/', views.conductores_activos, name='conductores_activos'),
     path('api/conductores_ubicaciones/', views.conductores_ubicaciones, name='conductores_ubicaciones'),
+    path('api/health/', views.api_health, name='api_health'),
+    path('api/health', views.api_health),
+    path('api/mobile/login/', views.mobile_login, name='mobile_login'),
+    path('api/mobile/login', views.mobile_login),
+    path('api/mobile/logout/', views.mobile_logout, name='mobile_logout'),
+    path('api/mobile/logout', views.mobile_logout),
+    path('api/mobile/sync-status/', views.mobile_sync_status, name='mobile_sync_status'),
+    path('api/mobile/sync-status', views.mobile_sync_status),
+    path('api/mobile/states/', views.mobile_latest_states, name='mobile_latest_states'),
+    path('api/mobile/states', views.mobile_latest_states),
 ]
     

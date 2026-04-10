@@ -700,6 +700,40 @@ def update_location_for(conductor, lat, lon):
     except (TypeError, ValueError):
         return
     conductor_id = str(conductor.id)
+    state = _ensure_conductor_state(conductor_id)
+    state['location'] = {
+        'lat': lat_f,
+        'lon': lon_f,
+        'timestamp': time.time()
+    }
+
+
+def update_mobile_state_for(conductor, score, status='normal', face_detected=True, lat=None, lon=None):
+    """Actualiza estado push desde app móvil local para el conductor."""
+    conductor_id = str(conductor.id)
+    state = _ensure_conductor_state(conductor_id)
+
+    try:
+        score_i = int(score)
+    except (TypeError, ValueError):
+        score_i = SCORE_START
+    state['score'] = max(SCORE_MIN, min(SCORE_MAX, score_i))
+    state['status'] = status or 'normal'
+    state['last_face_detected'] = bool(face_detected)
+    state['last_update'] = time.time()
+
+    if lat is not None and lon is not None:
+        try:
+            state['location'] = {
+                'lat': float(lat),
+                'lon': float(lon),
+                'timestamp': time.time(),
+            }
+        except (TypeError, ValueError):
+            pass
+
+
+def _ensure_conductor_state(conductor_id):
     if conductor_id not in _conductor_states:
         # Inicializar estado completo para evitar KeyError en procesamiento posterior.
         _conductor_states[conductor_id] = {
@@ -713,14 +747,11 @@ def update_location_for(conductor, lat, lon):
             'face_mesh': _create_face_mesh(),
             'chin_positions': [],
             'sustained_drowsy_start': None,
-            'location': None
+            'location': None,
+            'status': 'normal',
+            'last_face_detected': True,
         }
-    state = _conductor_states[conductor_id]
-    state['location'] = {
-        'lat': lat_f,
-        'lon': lon_f,
-        'timestamp': time.time()
-    }
+    return _conductor_states[conductor_id]
 
 
 def get_locations_snapshot():
