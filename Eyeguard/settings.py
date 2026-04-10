@@ -32,7 +32,17 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-9j_27-enzgf*l8q*^v#xn
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 # Configuración de ALLOWED_HOSTS
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+_allowed_hosts_env = os.environ.get('ALLOWED_HOSTS', '')
+ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts_env.split(',') if h.strip()]
+
+# Hosts útiles para desarrollo local y emulador Android.
+if DEBUG:
+    for host in ('localhost', '127.0.0.1', '0.0.0.0', '10.0.2.2'):
+        if host not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append(host)
+
+if not ALLOWED_HOSTS:
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1', '10.0.2.2']
 
 # Agregar dominios de Render automáticamente
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
@@ -241,11 +251,17 @@ EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'saguirreg@ucentral.edu.co')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 
-# Security settings for production
-if not DEBUG:
+# Security settings
+# En local (emulador Android) necesitamos HTTP para 10.0.2.2.
+# Habilita HTTPS forzado solo cuando FORCE_HTTPS=True.
+FORCE_HTTPS = os.environ.get('FORCE_HTTPS', 'False') == 'True'
+
+if FORCE_HTTPS:
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+
+if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'DENY'
