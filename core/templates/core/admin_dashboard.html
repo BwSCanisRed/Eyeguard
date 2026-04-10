@@ -366,6 +366,55 @@
             color: #b6c0d1;
             font-weight: 600;
         }
+        .mobile-table tr.mobile-row-critical {
+            background: rgba(255, 77, 109, 0.10);
+        }
+        .mobile-table tr.mobile-row-warning {
+            background: rgba(223, 134, 46, 0.10);
+        }
+        .mobile-table tr.mobile-row-normal {
+            background: rgba(39, 174, 96, 0.08);
+        }
+        .mobile-index-chip,
+        .mobile-state-chip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-weight: 700;
+            font-size: 0.82rem;
+            letter-spacing: 0.2px;
+            border: 1px solid transparent;
+        }
+        .mobile-index-chip.state-normal,
+        .mobile-state-chip.state-normal {
+            color: #9effc9;
+            background: rgba(39, 174, 96, 0.16);
+            border-color: rgba(39, 174, 96, 0.35);
+        }
+        .mobile-index-chip.state-warning,
+        .mobile-state-chip.state-warning {
+            color: #ffd7a8;
+            background: rgba(223, 134, 46, 0.18);
+            border-color: rgba(223, 134, 46, 0.45);
+        }
+        .mobile-index-chip.state-critical,
+        .mobile-state-chip.state-critical {
+            color: #ffb8c2;
+            background: rgba(255, 77, 109, 0.18);
+            border-color: rgba(255, 77, 109, 0.45);
+        }
+        .mobile-state-chip::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+            background: currentColor;
+            box-shadow: 0 0 6px currentColor;
+        }
     </style>
 </head>
 <body>
@@ -779,6 +828,29 @@
                     const tbody = document.getElementById('mobile-sync-table-body');
                     if (!tbody) return;
 
+                    const normalizeStatus = (statusRaw, indice) => {
+                        const status = String(statusRaw || '').toLowerCase().trim();
+                        if (status === 'sin rostro' || status === 'critico' || status === 'critical') {
+                            return 'critical';
+                        }
+                        if (status === 'somnoliento' || status === 'atencion' || status === 'warning') {
+                            return 'warning';
+                        }
+                        if (indice < 40) {
+                            return 'critical';
+                        }
+                        if (indice < 70) {
+                            return 'warning';
+                        }
+                        return 'normal';
+                    };
+
+                    const formatStatusLabel = (statusRaw) => {
+                        const status = String(statusRaw || '').toLowerCase().trim();
+                        if (!status) return 'SIN DATO';
+                        return status.toUpperCase();
+                    };
+
                     if (!states.length) {
                         tbody.innerHTML = '<tr><td colspan="8" style="color:#9aa4b2">Sin datos aún</td></tr>';
                         return;
@@ -786,18 +858,20 @@
 
                     tbody.innerHTML = states.map(item => {
                         const indice = Number(item.fatigue_index || 0);
+                        const severity = normalizeStatus(item.estado, indice);
+                        const rowClass = `mobile-row-${severity}`;
                         const loc = (item.latitude !== null && item.longitude !== null)
                             ? `${Number(item.latitude).toFixed(6)}, ${Number(item.longitude).toFixed(6)}`
                             : 'Sin ubicación';
                         const when = item.last_seen_at ? new Date(item.last_seen_at).toLocaleString() : '-';
 
-                        return `<tr>
+                        return `<tr class="${rowClass}">
                             <td>${item.documento || '-'}</td>
                             <td>${item.document_issue_date || '-'}</td>
                             <td>${item.nombre_conductor || '-'}</td>
                             <td>${item.placa || '-'}</td>
-                            <td>${indice}</td>
-                            <td>${item.estado || '-'}</td>
+                            <td><span class="mobile-index-chip state-${severity}">${indice}</span></td>
+                            <td><span class="mobile-state-chip state-${severity}">${formatStatusLabel(item.estado)}</span></td>
                             <td>${loc}</td>
                             <td>${when}</td>
                         </tr>`;
