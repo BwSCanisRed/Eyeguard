@@ -1,380 +1,414 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-    <title>Dashboard Administrativo - EyeGuard</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Monitoreo EyeGuard</title>
     <style>
-        :root{
-            --bg:#071026;
-            --panel:#07172a;
-            --muted:#9aa4b2;
-            --accent-green:#27ae60;
-            --accent-magenta:#7b2cbf;
-            --card-bg: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-            --radius:12px;
-            --glass: rgba(255,255,255,0.03);
-            --input-bg: rgba(255,255,255,0.04);
-            --error: #ff4d6d;
-            --error-bg: rgba(255,77,109,0.1);
+        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Archivo:wght@400;500;700&display=swap');
+
+        :root {
+            --bg: #06080f;
+            --panel: #0d111b;
+            --panel-soft: #121825;
+            --line: rgba(255,255,255,0.09);
+            --text: #eef2f8;
+            --muted: #9ca6bb;
+            --brand: #38f4a3;
+            --warn: #ffa733;
+            --danger: #ff5f6d;
         }
-        html,body{height:100%;margin:0}
-        body{
-            font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
-            background: linear-gradient(180deg,#071026 0%, #0b1220 60%);
-            color:#fff;
-            padding:20px;
+
+        * {
+            box-sizing: border-box;
         }
-        .form-columns {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 24px;
-            margin-top: 20px;
+
+        html,
+        body {
+            margin: 0;
+            min-height: 100%;
+            color: var(--text);
+            background:
+                radial-gradient(1200px 500px at 8% -10%, rgba(56, 244, 163, 0.10), transparent 55%),
+                radial-gradient(900px 400px at 90% 0%, rgba(58, 104, 255, 0.14), transparent 52%),
+                var(--bg);
+            font-family: Archivo, 'Segoe UI', sans-serif;
         }
-        .section-card {
-            background: var(--glass);
-            border: 1px solid rgba(255,255,255,0.04);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
+
+        .container {
+            width: min(1320px, 92vw);
+            margin: 0 auto;
+            padding: 28px 0 44px;
         }
-        .section-card h3 {
-            color: var(--accent-green);
-            margin-top: 0;
-            margin-bottom: 16px;
-            font-size: 1.1rem;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            padding-bottom: 8px;
-        }
-        .form-group {
-            margin-bottom: 16px;
-        }
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
-        }
-        label {
-            display: block;
-            color: var(--muted);
-            font-size: 0.9rem;
-            margin-bottom: 6px;
-        }
-        input, select {
-            width: 100%;
-            padding: 10px 12px;
-            background: var(--input-bg);
-            border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 8px;
-            color: #fff;
-            font-size: 0.95rem;
-            transition: all 0.2s ease;
-        }
-        input:focus, select:focus {
-            outline: none;
-            border-color: var(--accent-magenta);
-            box-shadow: 0 0 0 2px rgba(123,44,191,0.2);
-        }
-        select {
-            cursor: pointer;
-            background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
-                            linear-gradient(135deg, var(--muted) 50%, transparent 50%);
-            background-position: calc(100% - 20px) calc(1em + 2px),
-                               calc(100% - 15px) calc(1em + 2px);
-            background-size: 5px 5px,
-                           5px 5px;
-            background-repeat: no-repeat;
-            padding-right: 30px;
-        }
-        select option {
-            background-color: var(--bg);
-            color: #fff;
-        }
-        .form-error {
-            color: var(--error);
-            font-size: 0.85rem;
-            margin-top: 4px;
-        }
-        .form-error-box {
-            background: var(--error-bg);
-            padding: 10px;
-            border-radius: 6px;
-            margin-bottom: 16px;
-        }
-        .header{
-            display:flex;align-items:center;justify-content:space-between;padding:18px 26px;background:transparent;border-radius:12px;margin-bottom:18px
-        }
-        .brand{display:flex;align-items:center;gap:12px}
-        .brand .logo{width:46px;height:46px;border-radius:10px;background:linear-gradient(135deg,var(--accent-green),var(--accent-magenta));display:flex;align-items:center;justify-content:center;font-weight:700}
-        .container{max-width:1200px;margin:0 auto;padding:0 12px}
-        .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;margin-bottom:20px}
-        .card{background:var(--card-bg);border-radius:var(--radius);padding:18px;box-shadow:0 8px 30px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.03)}
-        .form-group{margin-bottom:12px}
-        label{display:block;margin-bottom:6px;color:var(--muted);font-weight:600}
-        input{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:#fff}
-    /* Selects: show a subtle light background so options are readable on open; option colors set for better contrast */
-        select{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.95);color:#0b1220;appearance:none;-moz-appearance:none;-webkit-appearance:none}
-        select:focus{outline:2px solid rgba(123,44,191,0.18)}
-        select option{color:#0b1220;background:#fff}
-        .btn {
-            display: inline-block;
-            padding: 12px 24px;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
-            margin: 6px 4px;
-            font-size: 0.95rem;
-            font-weight: 500;
-            transition: all 0.2s ease;
-        }
-        .btn-primary {
-            background: linear-gradient(90deg, var(--accent-green), var(--accent-magenta));
-            color: #fff;
-            font-weight: 600;
-        }
-        .btn-primary:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(39,174,96,0.2);
-        }
-        .btn-success {
-            background: var(--accent-green);
-            color: #fff;
-        }
-        .btn-success:hover {
-            background: #219a52;
-        }
-        .btn-danger {
-            background: var(--error);
-            color: #fff;
-        }
-        .btn-danger:hover {
-            background: #ff3355;
-        }
-        .messages{list-style:none;padding:0;margin:1rem 0}
-        .messages li{padding:10px;margin-bottom:10px;border-radius:8px}
-        .messages .success{background:rgba(39,174,96,0.12);color:var(--accent-green)}
-        .messages .error{background:rgba(255,77,109,0.08);color:#ffb3be}
-        .card h2{margin-top:0;color:#fff;padding-bottom:10px;margin-bottom:14px}
-        .tabs{display:flex;margin-bottom:18px}
-        .tab{padding:8px 12px;cursor:pointer;border:none;background:transparent;color:var(--muted);margin-right:6px;border-radius:8px}
-        .tab.active{background:linear-gradient(90deg,var(--accent-green),var(--accent-magenta));color:#fff}
-        .tab-content{display:none}
-        .tab-content.active{display:block}
-        .conductor-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-            gap: 24px;
-            padding: 16px;
-        }
-        .conductor-card {
-            background: var(--glass);
-            border-radius: 12px;
-            overflow: hidden;
-            position: relative;
-        }
-        .conductor-card.streaming {
-            border: 2px solid var(--accent-green);
-            box-shadow: 0 0 20px rgba(39, 174, 96, 0.3);
-        }
-        .streaming-badge {
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            background: var(--accent-green);
-            color: white;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 600;
+
+        .topbar {
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 6px;
-            z-index: 10;
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-        .streaming-dot {
-            width: 8px;
-            height: 8px;
-            background: white;
-            border-radius: 50%;
-            animation: blink 1.5s infinite;
-        }
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
-        }
-        .conductor-content {
-            display: flex;
-            flex-direction: column;
             gap: 12px;
-            padding: 12px;
+            margin-bottom: 34px;
         }
-        .estado-fatiga {
+
+        .brand {
             display: inline-flex;
             align-items: center;
-            justify-content: center;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            color: white;
+            gap: 10px;
             font-weight: 700;
-            font-size: 1.1rem;
+            letter-spacing: 0.2px;
         }
-        .estado-normal {
-            background: var(--accent-green);
+
+        .brand-mark {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #1fdf8f, #2f7eff);
+            display: grid;
+            place-items: center;
+            font-family: Sora, sans-serif;
+            font-size: 0.8rem;
+            color: #091217;
+            font-weight: 800;
         }
-        .estado-precaucion {
-            background: #df862e;
+
+        .topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
-        .estado-peligro {
-            background: #ff4d6d;
+
+        .pill {
+            border: 1px solid var(--line);
+            background: rgba(255,255,255,0.02);
+            color: var(--text);
+            border-radius: 999px;
+            padding: 9px 16px;
+            font-size: 0.86rem;
+            font-weight: 600;
+            letter-spacing: 0.2px;
         }
-        .vehiculo-info{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.03)}
-        .conductor-info-minimal {
-            background: rgba(255,255,255,0.03);
+
+        .hero {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 26px;
+            margin-bottom: 26px;
+            border: 1px solid var(--line);
+            border-radius: 24px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+            padding: 26px;
+            overflow: hidden;
+        }
+
+        .hero-title {
+            margin: 0;
+            line-height: 0.95;
+            font-size: clamp(3rem, 8vw, 8.5rem);
+            font-family: Sora, sans-serif;
+            letter-spacing: -0.04em;
+            text-transform: uppercase;
+        }
+
+        .hero-copy {
+            margin: 0;
+            color: var(--muted);
+            font-size: 1.02rem;
+            line-height: 1.65;
+            max-width: 520px;
+        }
+
+        .hero-kpis {
+            display: grid;
+            gap: 12px;
+            align-content: end;
+        }
+
+        .kpi {
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 14px;
+            background: rgba(255,255,255,0.02);
+        }
+
+        .kpi-label {
+            margin: 0 0 6px;
+            color: var(--muted);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .kpi-value {
+            margin: 0;
+            font-family: Sora, sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .messages {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 16px;
+            display: grid;
+            gap: 8px;
+        }
+
+        .messages li {
+            padding: 12px 14px;
             border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 16px;
+            border: 1px solid var(--line);
+            background: rgba(255,255,255,0.03);
         }
-        .conductor-info-minimal h4 {
-            margin: 0 0 12px 0;
-            color: var(--accent-green);
-            font-size: 1.1rem;
+
+        .messages .success {
+            border-color: rgba(56, 244, 163, 0.35);
+            color: #b7ffdd;
         }
-        .phone-link {
-            color: var(--accent-magenta);
+
+        .messages .error {
+            border-color: rgba(255, 95, 109, 0.4);
+            color: #ffd1d6;
+        }
+
+        .panel {
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            padding: 18px;
+            background: var(--panel);
+        }
+
+        .panel-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .panel-head h2 {
+            margin: 0;
+            font-family: Sora, sans-serif;
+            letter-spacing: -0.02em;
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        input[type="date"] {
+            background: #0f1524;
+            color: var(--text);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 8px 10px;
+            font: inherit;
+        }
+
+        .btn {
+            border: 1px solid transparent;
+            border-radius: 10px;
+            padding: 9px 14px;
+            cursor: pointer;
+            color: #061412;
+            background: var(--brand);
+            font-weight: 700;
+            font-family: Archivo, sans-serif;
+            transition: transform 0.18s ease, box-shadow 0.2s ease;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            margin: 8px 0;
+            justify-content: center;
+            gap: 6px;
         }
-        .phone-link:hover {
-            color: var(--accent-green);
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px rgba(56, 244, 163, 0.22);
         }
-        .phone-icon {
-            font-style: normal;
+
+        .btn-outline {
+            background: transparent;
+            border-color: var(--line);
+            color: var(--text);
         }
-        .placa {
-            background: rgba(255,255,255,0.04);
-            padding: 8px 12px;
-            border-radius: 6px;
-            margin: 8px 0;
+
+        .btn-danger {
+            background: rgba(255, 95, 109, 0.14);
+            color: #ffdfe3;
+            border-color: rgba(255, 95, 109, 0.4);
         }
-        .score-display {
-            margin: 12px 0;
-            text-align: center;
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+            gap: 16px;
+            margin-top: 14px;
         }
-        .btn-sm {
-            font-size: 0.875rem;
-            padding: 8px 16px;
-            border-radius: 6px;
-            width: 100%;
+
+        .conductor-card {
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            background: var(--panel-soft);
+            padding: 10px;
+            display: grid;
+            gap: 10px;
+            position: relative;
         }
-        .mt-2 {
-            margin-top: 0.5rem;
+
+        .conductor-card.streaming {
+            border-color: rgba(56, 244, 163, 0.5);
+            box-shadow: 0 0 0 1px rgba(56, 244, 163, 0.18), 0 12px 32px rgba(56, 244, 163, 0.12);
         }
-        .stream-wrapper {
-            width: 100%;
+
+        .streaming-badge {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            border: 1px solid rgba(56, 244, 163, 0.45);
+            background: rgba(56, 244, 163, 0.14);
+            color: #bcffe3;
+            border-radius: 999px;
+            padding: 5px 11px;
+            font-size: 0.73rem;
+            font-weight: 700;
+            letter-spacing: 0.07em;
+            animation: pulse 1.8s infinite;
         }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.65; }
+        }
+
         .stream-container {
             width: 100%;
-            aspect-ratio: 16/9;
-            border-radius: 8px;
+            aspect-ratio: 16 / 9;
+            border-radius: 12px;
             overflow: hidden;
             background: #000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            border: 1px solid rgba(255,255,255,0.05);
         }
+
         .stream-video {
             width: 100%;
             height: 100%;
             object-fit: contain;
         }
-        .info-wrapper {
-            width: 100%;
+
+        .conductor-info {
+            padding: 6px 6px 8px;
+            display: grid;
+            gap: 10px;
         }
-        .conductor-info-card {
-            background: #1d1d1d;
-            border-radius: 8px;
-            padding: 16px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        .conductor-header {
+
+        .conductor-head {
             display: flex;
+            align-items: center;
             justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-        .conductor-header h4 {
-            margin: 0;
-            color: var(--accent-green);
-            font-size: 1.1rem;
-            font-weight: 600;
-        }
-        .conductor-details {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-        }
-        .phone-link {
-            color: var(--accent-magenta);
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
             gap: 8px;
+        }
+
+        .conductor-head h4 {
+            margin: 0;
+            font-size: 1.04rem;
+        }
+
+        .fatigue-chip {
+            width: 44px;
+            height: 44px;
+            border-radius: 999px;
+            display: grid;
+            place-items: center;
+            font-weight: 800;
+            font-family: Sora, sans-serif;
             font-size: 0.95rem;
+            color: #08110f;
         }
-        .phone-link:hover {
-            color: var(--accent-green);
+
+        .estado-normal { background: #44f5aa; }
+        .estado-precaucion { background: var(--warn); }
+        .estado-peligro { background: var(--danger); color: #fff; }
+
+        .meta-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+            color: var(--muted);
+            font-size: 0.92rem;
         }
-        .placa-badge {
-            background: rgba(39,174,96,0.1);
-            color: var(--accent-green);
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 0.9rem;
+
+        .phone-link,
+        .maps-link {
+            color: #9ccfff;
+            text-decoration: none;
+            border-bottom: 1px dashed rgba(156, 207, 255, 0.5);
+            transition: color 0.2s ease, border-color 0.2s ease;
         }
+
+        .phone-link:hover,
+        .maps-link:hover {
+            color: #cde7ff;
+            border-color: #cde7ff;
+        }
+
+        .plate {
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-weight: 700;
+            color: #d9e0ee;
+        }
+
+        .driver-actions {
+            display: flex;
+            justify-content: flex-end;
+        }
+
         .mobile-support {
             margin-top: 20px;
+            border: 1px solid var(--line);
+            border-radius: 14px;
             background: rgba(255,255,255,0.02);
-            border: 1px solid rgba(255,255,255,0.05);
-            border-radius: 12px;
             padding: 14px;
+            overflow-x: auto;
         }
+
         .mobile-support h3 {
-            margin: 0 0 10px 0;
-            color: #9dd7ff;
+            margin: 0 0 10px;
+            font-family: Sora, sans-serif;
         }
+
         .mobile-table {
             width: 100%;
+            min-width: 860px;
             border-collapse: collapse;
             font-size: 0.9rem;
         }
+
         .mobile-table th,
         .mobile-table td {
+            padding: 9px;
             border-bottom: 1px solid rgba(255,255,255,0.06);
-            padding: 8px;
             text-align: left;
         }
+
         .mobile-table th {
-            color: #b6c0d1;
-            font-weight: 600;
+            color: #b8c1d4;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-size: 0.74rem;
+            font-weight: 700;
         }
-        .mobile-table tr.mobile-row-critical {
-            background: rgba(255, 77, 109, 0.10);
-        }
-        .mobile-table tr.mobile-row-warning {
-            background: rgba(223, 134, 46, 0.10);
-        }
-        .mobile-table tr.mobile-row-normal {
-            background: rgba(39, 174, 96, 0.08);
-        }
+
+        .mobile-row-normal { background: rgba(68, 245, 170, 0.08); }
+        .mobile-row-warning { background: rgba(255, 167, 51, 0.10); }
+        .mobile-row-critical { background: rgba(255, 95, 109, 0.10); }
+
         .mobile-index-chip,
         .mobile-state-chip {
             display: inline-flex;
@@ -383,465 +417,298 @@
             border-radius: 999px;
             padding: 4px 10px;
             font-weight: 700;
-            font-size: 0.82rem;
-            letter-spacing: 0.2px;
             border: 1px solid transparent;
         }
+
         .mobile-index-chip.state-normal,
         .mobile-state-chip.state-normal {
-            color: #9effc9;
-            background: rgba(39, 174, 96, 0.16);
-            border-color: rgba(39, 174, 96, 0.35);
+            color: #a4ffd7;
+            border-color: rgba(68, 245, 170, 0.45);
+            background: rgba(68, 245, 170, 0.14);
         }
+
         .mobile-index-chip.state-warning,
         .mobile-state-chip.state-warning {
-            color: #ffd7a8;
-            background: rgba(223, 134, 46, 0.18);
-            border-color: rgba(223, 134, 46, 0.45);
+            color: #ffd7a1;
+            border-color: rgba(255, 167, 51, 0.45);
+            background: rgba(255, 167, 51, 0.14);
         }
+
         .mobile-index-chip.state-critical,
         .mobile-state-chip.state-critical {
-            color: #ffb8c2;
-            background: rgba(255, 77, 109, 0.18);
-            border-color: rgba(255, 77, 109, 0.45);
+            color: #ffc9d0;
+            border-color: rgba(255, 95, 109, 0.45);
+            background: rgba(255, 95, 109, 0.16);
         }
-        .mobile-state-chip::before {
-            content: '';
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            margin-right: 6px;
-            background: currentColor;
-            box-shadow: 0 0 6px currentColor;
+
+        @media (max-width: 960px) {
+            .hero {
+                grid-template-columns: 1fr;
+            }
+
+            .hero-kpis {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                width: 94vw;
+                padding-top: 18px;
+            }
+
+            .hero {
+                padding: 18px;
+            }
+
+            .hero-title {
+                line-height: 1;
+            }
+
+            .hero-kpis {
+                grid-template-columns: 1fr;
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="container" style="display:flex;justify-content:space-between;align-items:center">
+    <div class="container">
+        <header class="topbar">
             <div class="brand">
-                <div class="logo">EG</div>
-                <div>
-                    <h1 style="margin:0;font-size:1.1rem">EyeGuard - Dashboard</h1>
-                </div>
+                <span class="brand-mark">EG</span>
+                <span>EyeGuard Control</span>
             </div>
-            <div>
-                <form method="post" action="{% url 'logout' %}" style="display:inline-block;margin:0">
+            <div class="topbar-actions">
+                <span class="pill">Monitoreo en vivo</span>
+                <form method="post" action="{% url 'logout' %}" style="margin:0;">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-sm" style="background:transparent;border:1px solid rgba(255,255,255,0.04);color:#fff;padding:8px 12px;border-radius:8px">Cerrar sesión</button>
+                    <button type="submit" class="pill">Cerrar sesion</button>
                 </form>
             </div>
-        </div>
-    </div>
+        </header>
 
-    <div class="container">
+        <section class="hero">
+            <div>
+                <h1 class="hero-title">Vision<br />en ruta</h1>
+                <p class="hero-copy">
+                    Panel centrado en seguimiento en tiempo real de conductores y datos
+                    de la app movil. La ubicacion de cada registro ahora se puede abrir
+                    directo en Google Maps.
+                </p>
+            </div>
+            <div class="hero-kpis">
+                <article class="kpi">
+                    <p class="kpi-label">Conductores registrados</p>
+                    <p class="kpi-value">{{ conductores|length }}</p>
+                </article>
+                <article class="kpi">
+                    <p class="kpi-label">Estado del panel</p>
+                    <p class="kpi-value">Activo</p>
+                </article>
+            </div>
+        </section>
+
         {% if messages %}
-        <ul class="messages">
-            {% for message in messages %}
-            <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
-            {% endfor %}
-        </ul>
+            <ul class="messages">
+                {% for message in messages %}
+                    <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                {% endfor %}
+            </ul>
         {% endif %}
 
-        <div class="tabs">
-            <button class="tab active" onclick="openTab(event, 'registroTab')">Registrar Conductor</button>
-            <button class="tab" onclick="openTab(event, 'monitoreoTab')">Monitorear Conductores</button>
-        </div>
-
-        <div id="registroTab" class="tab-content active">
-            <div class="card">
-                <div class="conductor-selector">
-                    <h2>{% if conductor_seleccionado %}Editar Conductor{% else %}Registrar Nuevo Conductor{% endif %}</h2>
-                    
-                    <div class="form-group mb-4">
-                        <label for="conductor_select">Seleccionar Conductor Existente:</label>
-                        <select id="conductor_select" class="form-control" onchange="seleccionarConductor(this.value)">
-                            <option value="">-- Nuevo Conductor --</option>
-                            {% for c in conductores %}
-                                <option value="{{ c.id }}" {% if conductor_seleccionado.id == c.id %}selected{% endif %}>
-                                    {{ c.nombre_completo }} - {{ c.documento }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
+        <section class="panel" id="monitoreoTab">
+            <div class="panel-head">
+                <h2>Monitoreo de conductores</h2>
+                <div class="controls">
+                    <button type="button" class="btn" onclick="refrescarMonitoreo(this)">Refrescar estado</button>
+                    <form id="exportForm" method="get" action="{% url 'export_critical_events' %}" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <input type="date" name="from" />
+                        <input type="date" name="to" />
+                        <button class="btn btn-outline" type="submit">Descargar CSV</button>
+                    </form>
                 </div>
-
-                <form method="POST">
-                    {% csrf_token %}
-                    {# show non-field errors for the conductor form #}
-                    {% if conductor_form.non_field_errors %}
-                        <div style="color:#ffb3be;margin-bottom:10px">
-                            {{ conductor_form.non_field_errors }}
-                        </div>
-                    {% endif %}
-                    {% if conductor_seleccionado %}
-                        <input type="hidden" name="editar_conductor" value="1">
-                    {% endif %}
-
-                    <div class="form-columns">
-                        <div class="form-column">
-                            {% if not conductor_seleccionado %}
-                            <div class="section-card">
-                                <h3>Datos de Usuario</h3>
-                                <div class="form-group">
-                                    <label for="id_username">Nombre de usuario:</label>
-                                    {{ conductor_form.username }}
-                                    {% if conductor_form.username.errors %}
-                                        <div class="form-error">{{ conductor_form.username.errors }}</div>
-                                    {% endif %}
-                                </div>
-                                <div class="form-group">
-                                    <label for="id_password">Contraseña:</label>
-                                    {{ conductor_form.password }}
-                                    {% if conductor_form.password.errors %}
-                                        <div class="form-error">{{ conductor_form.password.errors }}</div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            {% endif %}
-                            
-                            <div class="section-card">
-                                <h3>Datos del Conductor</h3>
-                                <div class="form-group">
-                                    <label for="id_email">Correo electrónico:</label>
-                                    {{ conductor_form.email }}
-                                    {% if conductor_form.email.errors %}
-                                        <div class="form-error">{{ conductor_form.email.errors }}</div>
-                                    {% endif %}
-                                </div>
-                                <div class="form-group">
-                                    <label for="id_nombres">Nombres:</label>
-                                    {{ conductor_form.nombres }}
-                                    {% if conductor_form.nombres.errors %}
-                                        <div class="form-error">{{ conductor_form.nombres.errors }}</div>
-                                    {% endif %}
-                                </div>
-                                <div class="form-group">
-                                    <label for="id_apellidos">Apellidos:</label>
-                                    {{ conductor_form.apellidos }}
-                                    {% if conductor_form.apellidos.errors %}
-                                        <div class="form-error">{{ conductor_form.apellidos.errors }}</div>
-                                    {% endif %}
-                                </div>
-                                <div class="form-grid">
-                                    <div class="form-group">
-                                        <label for="id_documento">Documento:</label>
-                                        {{ conductor_form.documento }}
-                                        {% if conductor_form.documento.errors %}
-                                            <div class="form-error">{{ conductor_form.documento.errors }}</div>
-                                        {% endif %}
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="id_telefono">Teléfono:</label>
-                                        {{ conductor_form.telefono }}
-                                        {% if conductor_form.telefono.errors %}
-                                            <div class="form-error">{{ conductor_form.telefono.errors }}</div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                                <div class="form-grid">
-                                    <div class="form-group">
-                                        <label for="id_licencia">Licencia:</label>
-                                        {{ conductor_form.licencia }}
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="id_licencia_vencimiento">Vencimiento:</label>
-                                        {{ conductor_form.licencia_vencimiento }}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="form-column">
-                            <div class="section-card">
-                                <h3>Datos del Vehículo</h3>
-                                {% if vehiculo_form.non_field_errors %}
-                                    <div class="form-error form-error-box">{{ vehiculo_form.non_field_errors }}</div>
-                                {% endif %}
-                                <div class="form-grid">
-                                    <div class="form-group">
-                                        <label for="id_placa">Placa:</label>
-                                        {{ vehiculo_form.placa }}
-                                        {% if vehiculo_form.placa.errors %}
-                                            <div class="form-error">{{ vehiculo_form.placa.errors }}</div>
-                                        {% endif %}
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="id_marca">Marca:</label>
-                                        {{ vehiculo_form.marca }}
-                                        {% if vehiculo_form.marca.errors %}
-                                            <div class="form-error">{{ vehiculo_form.marca.errors }}</div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                                <div class="form-grid">
-                                    <div class="form-group">
-                                        <label for="id_modelo">Modelo:</label>
-                                        {{ vehiculo_form.modelo }}
-                                        {% if vehiculo_form.modelo.errors %}
-                                            <div class="form-error">{{ vehiculo_form.modelo.errors }}</div>
-                                        {% endif %}
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="id_color">Color:</label>
-                                        {{ vehiculo_form.color }}
-                                        {% if vehiculo_form.color.errors %}
-                                            <div class="form-error">{{ vehiculo_form.color.errors }}</div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                                <div class="form-grid">
-                                    <div class="form-group">
-                                        <label for="id_tipo_carroceria">Tipo de Carrocería:</label>
-                                        {{ vehiculo_form.tipo_carroceria }}
-                                        {% if vehiculo_form.tipo_carroceria.errors %}
-                                            <div class="form-error">{{ vehiculo_form.tipo_carroceria.errors }}</div>
-                                        {% endif %}
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="id_servicio">Servicio:</label>
-                                        {{ vehiculo_form.servicio }}
-                                        {% if vehiculo_form.servicio.errors %}
-                                            <div class="form-error">{{ vehiculo_form.servicio.errors }}</div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {% if conductor_seleccionado %}
-                        <button type="submit" class="btn btn-primary">Actualizar Conductor y Vehículo</button>
-                        <button type="button" class="btn" onclick="seleccionarConductor('')">Cancelar edición</button>
-                    {% else %}
-                        <button type="submit" class="btn btn-primary">Registrar Conductor y Vehículo</button>
-                    {% endif %}
-                </form>
             </div>
-        </div>
 
-        <div id="monitoreoTab" class="tab-content">
-            <div class="card">
-                <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
-                    <h2 style="margin:0">Monitoreo de Conductores</h2>
-                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                        <button type="button" class="btn btn-success" onclick="refrescarMonitoreo()">Refrescar estado</button>
-                        <form id="exportForm" method="get" action="{% url 'export_critical_events' %}" style="display:flex;gap:8px;align-items:center;">
-                        <input type="date" name="from" style="padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:#fff" />
-                        <input type="date" name="to" style="padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:#fff" />
-                        <button class="btn btn-primary" type="submit">Descargar Informe CSV</button>
-                        </form>
-                    </div>
-                </div>
-                <div class="conductor-grid">
-                    {% for conductor in conductores %}
-                    <div class="conductor-card {% if conductor.autenticado %}streaming{% endif %}" id="conductor-card-{{ conductor.id }}" data-conductor-id="{{ conductor.id }}">
+            <div class="grid">
+                {% for conductor in conductores %}
+                    <article class="conductor-card {% if conductor.autenticado %}streaming{% endif %}" id="conductor-card-{{ conductor.id }}" data-conductor-id="{{ conductor.id }}">
                         {% if conductor.autenticado %}
-                        <div class="streaming-badge">
-                            <span class="streaming-dot"></span>
-                            EN VIVO
-                        </div>
+                            <div class="streaming-badge">EN VIVO</div>
                         {% endif %}
-                        <div class="conductor-content">
-                            <div class="stream-wrapper">
-                                <div class="stream-container">
-                                    <img src="{% url 'stream_mjpeg' conductor.id %}" alt="Stream {{ conductor.usuario.username }}" class="stream-video" />
-                                </div>
-                            </div>
-                            <div class="info-wrapper">
-                                <div class="conductor-info-card">
-                                    <div class="conductor-header">
-                                        <h4>{{ conductor.nombre_completo }}</h4>
-                                        <span id="score-{{ conductor.id }}" data-url="{% url 'stream_score' conductor.id %}" class="estado-fatiga estado-normal">Cargando...</span>
-                                    </div>
-                                    
-                                    <div class="conductor-details">
-                                        <a href="tel:{{ conductor.telefono }}" class="phone-link">
-                                            <i class="phone-icon">📞</i> {{ conductor.telefono }}
-                                        </a>
-                                        {% if conductor.vehiculos.first %}
-                                            <div class="placa-badge">{{ conductor.vehiculos.first.placa }}</div>
-                                        {% endif %}
-                                    </div>
-                                    <div id="location-{{ conductor.id }}" style="font-size:0.85rem;color:#9aa4b2;margin-bottom:10px;">
-                                        <strong>📍 Ubicación:</strong> <span class="loc-text">Sin datos</span>
-                                    </div>
 
-                                    <form method="post" action="{% url 'delete_conductor' conductor.id %}" onsubmit="return confirm('¿Eliminar conductor {{ conductor.nombre_completo }}? Esta acción es irreversible.');">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
-                                    </form>
-                                </div>
+                        <div class="stream-container">
+                            <img src="{% url 'stream_mjpeg' conductor.id %}" alt="Stream {{ conductor.usuario.username }}" class="stream-video" />
+                        </div>
+
+                        <div class="conductor-info">
+                            <div class="conductor-head">
+                                <h4>{{ conductor.nombre_completo }}</h4>
+                                <span id="score-{{ conductor.id }}" data-url="{% url 'stream_score' conductor.id %}" class="fatigue-chip estado-normal">--</span>
+                            </div>
+
+                            <div class="meta-row">
+                                <span>
+                                    Telefono:
+                                    <a href="tel:{{ conductor.telefono }}" class="phone-link">{{ conductor.telefono }}</a>
+                                </span>
+                                {% if conductor.vehiculos.first %}
+                                    <span class="plate">{{ conductor.vehiculos.first.placa }}</span>
+                                {% endif %}
+                            </div>
+
+                            <div class="meta-row" id="location-{{ conductor.id }}">
+                                <span>Ubicacion:</span>
+                                <a class="maps-link loc-text" href="#" target="_blank" rel="noopener noreferrer">Sin datos</a>
+                            </div>
+
+                            <div class="driver-actions">
+                                <form method="post" action="{% url 'delete_conductor' conductor.id %}" onsubmit="return confirm('Eliminar conductor {{ conductor.nombre_completo }}? Esta accion es irreversible.');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                                </form>
                             </div>
                         </div>
-                    </div>
-                    {% empty %}
-                    <p>No hay conductores registrados.</p>
-                    {% endfor %}
-                </div>
-
-                <div class="mobile-support">
-                    <h3>Soporte de datos recibidos desde app móvil</h3>
-                    <table class="mobile-table">
-                        <thead>
-                            <tr>
-                                <th>Documento</th>
-                                <th>Fecha Expedición</th>
-                                <th>Nombre</th>
-                                <th>Placa</th>
-                                <th>Indice</th>
-                                <th>Estado</th>
-                                <th>Ubicación</th>
-                                <th>Última sincronización</th>
-                            </tr>
-                        </thead>
-                        <tbody id="mobile-sync-table-body">
-                            <tr><td colspan="8" style="color:#9aa4b2">Sin datos aún</td></tr>
-                        </tbody>
-                    </table>
-                </div>
+                    </article>
+                {% empty %}
+                    <p style="color:var(--muted);">No hay conductores registrados.</p>
+                {% endfor %}
             </div>
-        </div>
+
+            <section class="mobile-support">
+                <h3>Sincronizacion desde app movil</h3>
+                <table class="mobile-table">
+                    <thead>
+                        <tr>
+                            <th>Documento</th>
+                            <th>Fecha expedicion</th>
+                            <th>Nombre</th>
+                            <th>Placa</th>
+                            <th>Indice</th>
+                            <th>Estado</th>
+                            <th>Ubicacion</th>
+                            <th>Ultima sincronizacion</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mobile-sync-table-body">
+                        <tr><td colspan="8" style="color:var(--muted);">Sin datos aun</td></tr>
+                    </tbody>
+                </table>
+            </section>
+        </section>
     </div>
 
     <script>
-        function seleccionarConductor(conductorId) {
-            if (conductorId) {
-                window.location.href = '?conductor_id=' + conductorId;
-            } else {
-                window.location.href = window.location.pathname;
-            }
-        }
-
-        function openTab(evt, tabName) {
-            var i, tabcontent, tablinks;
-            
-            // Ocultar todos los contenidos de las pestañas
-            tabcontent = document.getElementsByClassName("tab-content");
-            for (i = 0; i < tabcontent.length; i++) {
-                tabcontent[i].style.display = "none";
-            }
-
-            // Remover la clase "active" de todas las pestañas
-            tablinks = document.getElementsByClassName("tab");
-            for (i = 0; i < tablinks.length; i++) {
-                tablinks[i].className = tablinks[i].className.replace(" active", "");
-            }
-
-            // Mostrar la pestaña actual y marcarla como activa
-            document.getElementById(tabName).style.display = "block";
-            evt.currentTarget.className += " active";
-        }
-
-        // Polling para actualizar scores en vivo
         function actualizarScores() {
             const scoreSpans = document.querySelectorAll('[id^="score-"]');
             const promises = [];
-            scoreSpans.forEach(span => {
+
+            scoreSpans.forEach((span) => {
                 const url = span.dataset.url;
                 if (!url) return;
+
                 const promise = fetch(url)
-                    .then(resp => resp.json())
-                    .then(data => {
+                    .then((resp) => resp.json())
+                    .then((data) => {
                         const s = parseInt(data.score, 10);
-                        span.textContent = s;
-                        span.classList.remove('estado-normal','estado-precaucion','estado-peligro');
+                        span.textContent = Number.isFinite(s) ? s : '--';
+                        span.classList.remove('estado-normal', 'estado-precaucion', 'estado-peligro');
                         if (s >= 70) {
-                            span.classList.add('estado-normal');   // verde
+                            span.classList.add('estado-normal');
                         } else if (s >= 40) {
-                            span.classList.add('estado-precaucion'); // naranja
+                            span.classList.add('estado-precaucion');
                         } else {
-                            span.classList.add('estado-peligro');   // rojo
+                            span.classList.add('estado-peligro');
                         }
-                    }).catch(err => {
-                        // no hacer nada por ahora
+                    })
+                    .catch(() => {
+                        span.textContent = '--';
                     });
+
                 promises.push(promise);
             });
+
             return Promise.all(promises);
         }
 
-        // Actualizar estado de streaming de conductores
         function actualizarEstadoStreaming() {
             return fetch('/api/conductores_activos/')
-                .then(resp => resp.json())
-                .then(data => {
-                    const conductoresActivos = data.conductores_activos || [];
-                    
-                    // Actualizar todas las tarjetas de conductores
-                    document.querySelectorAll('.conductor-card').forEach(card => {
-                        const conductorId = card.dataset.conductorId;
+                .then((resp) => resp.json())
+                .then((data) => {
+                    const conductoresActivos = (data.conductores_activos || []).map(String);
+
+                    document.querySelectorAll('.conductor-card').forEach((card) => {
+                        const conductorId = String(card.dataset.conductorId || '');
                         const isStreaming = conductoresActivos.includes(conductorId);
-                        
-                        // Agregar/remover clase streaming
+
                         if (isStreaming) {
                             if (!card.classList.contains('streaming')) {
                                 card.classList.add('streaming');
-                                // Agregar badge si no existe
-                                if (!card.querySelector('.streaming-badge')) {
-                                    const badge = document.createElement('div');
-                                    badge.className = 'streaming-badge';
-                                    badge.innerHTML = '<span class="streaming-dot"></span>EN VIVO';
-                                    card.insertBefore(badge, card.firstChild);
-                                }
+                            }
+                            if (!card.querySelector('.streaming-badge')) {
+                                const badge = document.createElement('div');
+                                badge.className = 'streaming-badge';
+                                badge.textContent = 'EN VIVO';
+                                card.prepend(badge);
                             }
                         } else {
                             card.classList.remove('streaming');
-                            // Remover badge si existe
                             const badge = card.querySelector('.streaming-badge');
-                            if (badge) {
-                                badge.remove();
-                            }
+                            if (badge) badge.remove();
                         }
                     });
-                }).catch(err => {
-                    console.error('Error al actualizar estado de streaming:', err);
+                })
+                .catch(() => {
+                    // silencioso
                 });
         }
 
         function actualizarUbicaciones() {
             return fetch('/api/conductores_ubicaciones/')
-                .then(resp => resp.json())
-                .then(data => {
+                .then((resp) => resp.json())
+                .then((data) => {
                     const ubicaciones = data.ubicaciones || {};
                     Object.entries(ubicaciones).forEach(([cid, loc]) => {
                         const el = document.getElementById('location-' + cid);
-                        if (el) {
-                            const span = el.querySelector('.loc-text');
-                            if (span) {
-                                span.textContent = `${parseFloat(loc.lat).toFixed(6)}, ${parseFloat(loc.lon).toFixed(6)}`;
-                                span.style.color = 'var(--accent-green)';
-                            }
+                        if (!el) return;
+                        const anchor = el.querySelector('.loc-text');
+                        if (!anchor) return;
+
+                        const lat = Number(loc.lat);
+                        const lon = Number(loc.lon);
+                        if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+                            anchor.textContent = 'Sin datos';
+                            anchor.removeAttribute('href');
+                            return;
                         }
+
+                        const coords = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+                        anchor.textContent = coords;
+                        anchor.href = `https://www.google.com/maps?q=${lat},${lon}`;
                     });
-                }).catch(err => {
+                })
+                .catch(() => {
                     // silencioso
                 });
         }
 
         function actualizarEstadosMoviles() {
             return fetch('/api/mobile/states/')
-                .then(resp => resp.json())
-                .then(data => {
+                .then((resp) => resp.json())
+                .then((data) => {
                     const states = data.states || [];
                     const tbody = document.getElementById('mobile-sync-table-body');
                     if (!tbody) return;
 
                     const normalizeStatus = (statusRaw, indice) => {
                         const status = String(statusRaw || '').toLowerCase().trim();
-                        if (status === 'sin rostro' || status === 'critico' || status === 'critical') {
-                            return 'critical';
-                        }
-                        if (status === 'somnoliento' || status === 'atencion' || status === 'warning') {
-                            return 'warning';
-                        }
-                        if (indice < 40) {
-                            return 'critical';
-                        }
-                        if (indice < 70) {
-                            return 'warning';
-                        }
+                        if (status === 'sin rostro' || status === 'critico' || status === 'critical') return 'critical';
+                        if (status === 'somnoliento' || status === 'atencion' || status === 'warning') return 'warning';
+                        if (indice < 40) return 'critical';
+                        if (indice < 70) return 'warning';
                         return 'normal';
                     };
 
@@ -852,17 +719,20 @@
                     };
 
                     if (!states.length) {
-                        tbody.innerHTML = '<tr><td colspan="8" style="color:#9aa4b2">Sin datos aún</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="8" style="color:var(--muted);">Sin datos aun</td></tr>';
                         return;
                     }
 
-                    tbody.innerHTML = states.map(item => {
+                    tbody.innerHTML = states.map((item) => {
                         const indice = Number(item.fatigue_index || 0);
                         const severity = normalizeStatus(item.estado, indice);
                         const rowClass = `mobile-row-${severity}`;
-                        const loc = (item.latitude !== null && item.longitude !== null)
-                            ? `${Number(item.latitude).toFixed(6)}, ${Number(item.longitude).toFixed(6)}`
-                            : 'Sin ubicación';
+                        const hasLocation = item.latitude !== null && item.longitude !== null;
+                        const lat = Number(item.latitude);
+                        const lon = Number(item.longitude);
+                        const loc = hasLocation && Number.isFinite(lat) && Number.isFinite(lon)
+                            ? `<a class="maps-link" href="https://www.google.com/maps?q=${lat},${lon}" target="_blank" rel="noopener noreferrer">${lat.toFixed(6)}, ${lon.toFixed(6)}</a>`
+                            : 'Sin ubicacion';
                         const when = item.last_seen_at ? new Date(item.last_seen_at).toLocaleString() : '-';
 
                         return `<tr class="${rowClass}">
@@ -876,32 +746,19 @@
                             <td>${when}</td>
                         </tr>`;
                     }).join('');
-                }).catch(() => {
+                })
+                .catch(() => {
                     // silencioso
                 });
         }
 
-        // iniciar polling cada 2s cuando se abra la pestaña de monitoreo
-        setInterval(function(){
-            // solo actualizar si la pestaña monitoreo está visible
-            const monitoreo = document.getElementById('monitoreoTab');
-            if (monitoreo && monitoreo.style.display !== 'none') {
-                actualizarScores();
-                actualizarEstadoStreaming();
-                actualizarUbicaciones();
-                actualizarEstadosMoviles();
-            }
-        }, 2000);
+        function refrescarMonitoreo(button) {
+            if (!button) return;
+            const originalText = button.textContent;
+            button.disabled = true;
+            button.textContent = 'Actualizando...';
+            button.style.opacity = '0.7';
 
-        // Botón de refresco manual con feedback visual
-        function refrescarMonitoreo(){
-            const btn = event.target;
-            const originalText = btn.textContent;
-            btn.disabled = true;
-            btn.textContent = 'Actualizando...';
-            btn.style.opacity = '0.6';
-            
-            // Ejecutar actualización
             Promise.all([
                 actualizarScores(),
                 actualizarEstadoStreaming(),
@@ -909,15 +766,22 @@
                 actualizarEstadosMoviles()
             ]).finally(() => {
                 setTimeout(() => {
-                    btn.disabled = false;
-                    btn.textContent = originalText;
-                    btn.style.opacity = '1';
-                }, 500);
+                    button.disabled = false;
+                    button.textContent = originalText;
+                    button.style.opacity = '1';
+                }, 350);
             });
         }
 
-        // Cargar tabla de soporte al abrir.
-        actualizarEstadosMoviles();
+        function tickMonitoreo() {
+            actualizarScores();
+            actualizarEstadoStreaming();
+            actualizarUbicaciones();
+            actualizarEstadosMoviles();
+        }
+
+        tickMonitoreo();
+        setInterval(tickMonitoreo, 2000);
     </script>
 </body>
 </html>
