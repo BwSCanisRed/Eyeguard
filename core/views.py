@@ -305,12 +305,14 @@ def admin_dashboard(request):
 
     conductores = Conductor.objects.all()
     vehiculos = Vehiculo.objects.all()
+    mobile_registered_count = MobileTelemetrySnapshot.objects.exclude(documento='').values('documento').distinct().count()
     
     context = {
         'conductor_form': conductor_form,
         'vehiculo_form': vehiculo_form,
         'conductores': conductores,
         'vehiculos': vehiculos,
+        'mobile_registered_count': mobile_registered_count,
         'conductor_seleccionado': conductor_seleccionado,
     }
     return render(request, 'core/admin_dashboard.html', context)

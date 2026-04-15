@@ -502,7 +502,11 @@
             </div>
             <div class="hero-kpis">
                 <article class="kpi">
-                    <p class="kpi-label">Conductores registrados</p>
+                    <p class="kpi-label">Registrados (transmision movil)</p>
+                    <p class="kpi-value" id="mobile-registered-kpi">{{ mobile_registered_count }}</p>
+                </article>
+                <article class="kpi">
+                    <p class="kpi-label">Conductores en panel web</p>
                     <p class="kpi-value">{{ conductores|length }}</p>
                 </article>
                 <article class="kpi">
@@ -574,7 +578,7 @@
                         </div>
                     </article>
                 {% empty %}
-                    <p style="color:var(--muted);">No hay conductores registrados.</p>
+                    <p id="no-web-conductores" style="color:var(--muted);">No hay conductores en panel web. Los registrados se muestran en la transmision movil.</p>
                 {% endfor %}
             </div>
 
@@ -701,7 +705,17 @@
                 .then((data) => {
                     const states = data.states || [];
                     const tbody = document.getElementById('mobile-sync-table-body');
+                    const mobileKpi = document.getElementById('mobile-registered-kpi');
                     if (!tbody) return;
+
+                    if (mobileKpi) {
+                        const docs = new Set(
+                            states
+                                .map((item) => String(item.documento || '').trim())
+                                .filter((value) => value)
+                        );
+                        mobileKpi.textContent = String(docs.size);
+                    }
 
                     const normalizeStatus = (statusRaw, indice) => {
                         const status = String(statusRaw || '').toLowerCase().trim();
