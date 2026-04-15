@@ -2,72 +2,170 @@
 <!DOCTYPE html>
 <html lang="{{ LANGUAGE_CODE }}">
 <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{% trans "Iniciar Sesión" %} - EyeGuard</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Archivo:wght@400;500;700&display=swap');
+
         :root{
-            --bg:#0f1724; /* dark blue background */
-            --card:#0f1724;
-            --muted:#9aa4b2;
-            --accent-green: #27ae60;
-            --accent-magenta: #7b2cbf;
-            --white: #ffffff;
-            --radius: 12px;
-            --glass: rgba(255,255,255,0.04);
+            --bg:#06080f;
+            --panel:#0d111b;
+            --line:rgba(255,255,255,0.1);
+            --text:#eef2f8;
+            --muted:#9ca6bb;
+            --brand:#38f4a3;
+            --accent:#2f7eff;
+            --danger:#ff8f99;
         }
+
+        * {
+            box-sizing: border-box;
+        }
+
         html,body{height:100%;margin:0}
         body{
-            font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
-            background: linear-gradient(180deg, #071026 0%, #0b1220 60%);
-            display:flex;align-items:center;justify-content:center;padding:32px;color:var(--white)
+            font-family: Archivo, 'Segoe UI', sans-serif;
+            background:
+                radial-gradient(1200px 560px at 8% -12%, rgba(56, 244, 163, 0.12), transparent 55%),
+                radial-gradient(900px 420px at 92% -5%, rgba(47, 126, 255, 0.17), transparent 54%),
+                var(--bg);
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            padding:24px;
+            color:var(--text);
+            position: relative;
         }
+
         .login-container{
-            width:100%;max-width:420px;background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
-            padding:28px;border-radius:var(--radius);box-shadow:0 10px 30px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.04)
+            width:100%;
+            max-width:460px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015));
+            border-radius: 22px;
+            border:1px solid var(--line);
+            box-shadow:0 26px 60px rgba(2,6,23,0.55);
+            padding:30px;
+            backdrop-filter: blur(12px);
         }
+
         .brand{display:flex;align-items:center;gap:12px;margin-bottom:18px}
-        .brand .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent-green),var(--accent-magenta));display:flex;align-items:center;justify-content:center;font-weight:700}
-        h1{font-size:1.25rem;margin:0}
+        .brand .logo{
+            width:44px;
+            height:44px;
+            border-radius:10px;
+            background:linear-gradient(135deg,var(--brand),var(--accent));
+            display:grid;
+            place-items:center;
+            font-family: Sora, sans-serif;
+            font-weight:800;
+            color:#081611;
+        }
+        h1{
+            font-size:1.25rem;
+            margin:0;
+            font-family: Sora, sans-serif;
+            letter-spacing: -0.02em;
+        }
         p.lead{color:var(--muted);margin:6px 0 18px}
-    .form-group{margin-bottom:12px}
-    label{display:block;color:var(--muted);font-size:0.85rem;margin-bottom:6px}
-    input{width:100%;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--white);outline:none}
-    select{width:100%;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.95);color:#0b1220}
-    select option{color:#0b1220;background:#fff}
+
+        .form-group{margin-bottom:12px}
+        label{display:block;color:var(--muted);font-size:0.85rem;margin-bottom:6px}
+        input,
+        select{
+            width:100%;
+            padding:11px 12px;
+            border-radius:10px;
+            border:1px solid var(--line);
+            background:#0f1524;
+            color:var(--text);
+            outline:none;
+            font: inherit;
+        }
+        input:focus,
+        select:focus {
+            border-color: rgba(56, 244, 163, 0.5);
+            box-shadow: 0 0 0 2px rgba(56, 244, 163, 0.18);
+        }
         input::placeholder{color:rgba(255,255,255,0.35)}
-        button.primary{width:100%;padding:12px;border-radius:10px;border:none;background:linear-gradient(90deg,var(--accent-green),var(--accent-magenta));color:var(--white);font-weight:600;cursor:pointer}
+        button.primary{
+            width:100%;
+            padding:12px;
+            border-radius:12px;
+            border:none;
+            background:var(--brand);
+            color:#072019;
+            font-weight:700;
+            cursor:pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        button.primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 24px rgba(56, 244, 163, 0.3);
+        }
         .messages{list-style:none;padding:0;margin:12px 0}
-        .messages li{background:rgba(255,255,255,0.04);padding:8px;border-radius:8px;color:#ffdede}
+        .messages li{
+            background:rgba(255, 95, 109, 0.12);
+            border: 1px solid rgba(255, 95, 109, 0.35);
+            padding:8px;
+            border-radius:8px;
+            color:var(--danger);
+        }
         .foot{margin-top:14px;text-align:center;color:var(--muted);font-size:0.85rem}
+        .foot a {
+            color: #9ccfff;
+            text-decoration: none;
+            border-bottom: 1px dashed rgba(156, 207, 255, 0.5);
+        }
+
         .language-selector {
             position: absolute;
             top: 20px;
             right: 20px;
             display: flex;
             gap: 8px;
-            background: var(--glass);
+            background: rgba(13, 17, 27, 0.9);
             padding: 8px 12px;
-            border-radius: 30px;
-            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 999px;
+            border: 1px solid var(--line);
         }
         .language-selector button {
             background: transparent;
             border: none;
             cursor: pointer;
-            font-size: 0.85rem;
-            font-weight: 600;
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
             transition: all 0.2s;
             padding: 6px 12px;
-            border-radius: 8px;
+            border-radius: 999px;
             color: var(--muted);
         }
         .language-selector button:hover {
-            transform: scale(1.05);
             background: rgba(255,255,255,0.08);
-            color: var(--white);
+            color: var(--text);
         }
         .language-selector button.active {
-            background: var(--accent-green);
-            color: var(--white);
+            background: var(--brand);
+            color: #072019;
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 14px;
+            }
+            .login-container {
+                padding: 22px;
+            }
+            .language-selector {
+                top: 10px;
+                right: 10px;
+                gap: 4px;
+                padding: 6px 8px;
+            }
+            .language-selector button {
+                padding: 6px 9px;
+            }
         }
     </style>
 </head>
